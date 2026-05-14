@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
+from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -24,6 +25,7 @@ from data_loader import (
     load_workbook_sheets,
 )
 from file_registry import FileRecord, FileRegistry
+from file_validation import validate_excel_file
 from settings import BASE_DIR, get_settings
 
 settings = get_settings()
@@ -137,6 +139,25 @@ def load_active_dashboard_payload(request: Request) -> tuple[dict, dict, dict]:
     return dashboard_payload_cache.get(record.id, path, load_dashboard_payload)
 
 
+def set_active_file(request: Request, file_id: int) -> FileRecord:
+    record = file_registry.get_valid_by_id(file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Файл не найден: {file_id}")
+    request.session[SESSION_ACTIVE_FILE_KEY] = record.id
+    return record
+
+
+def files_payload(request: Request) -> dict:
+    active = get_active_file(request)
+    latest = file_registry.get_latest_valid()
+    return {
+        "active_file_id": active.id if active else None,
+        "latest_file_id": latest.id if latest else None,
+        "has_newer_version": bool(active and latest and active.id != latest.id),
+        "files": [record.to_dict() for record in file_registry.list_files()],
+    }
+
+
 def get_class_or_404(navigation: dict, class_name: str) -> dict:
     class_row = navigation["class_index"].get(class_name)
     if not class_row:
@@ -177,6 +198,66 @@ async def dashboard_http_exception_handler(request: Request, exc: HTTPException)
     detail = exc.detail
     message = detail if isinstance(detail, str) else str(detail)
     return render_dashboard_error(request, message, status_code=404)
+
+
+@app.get("/api/files")
+def api_files(request: Request) -> dict:
+    return files_payload(request)
+
+
+@app.post("/api/session/active-file/{file_id}")
+def api_set_active_file(request: Request, file_id: int) -> dict:
+    record = set_active_file(request, file_id)
+    return {
+        "active_file_id": record.id,
+        "file": record.to_dict(),
+        "files": files_payload(request),
+    }
+
+
+@app.post("/api/files/upload")
+def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    original_name = Path(file.filename or "").name
+    if not original_name:
+        raise HTTPException(status_code=400, detail="Имя файла не передано")
+    if Path(original_name).suffix.casefold() != ".xlsx":
+        raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx")
+
+    incoming_dir = settings.resolved_uploads_dir / ".incoming"
+    incoming_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid4().hex}.xlsx"
+    temp_path = incoming_dir / stored_name
+    final_path = settings.resolved_uploads_dir / stored_name
+
+    try:
+        with temp_path.open("wb") as output:
+            while chunk := file.file.read(1024 * 1024):
+                output.write(chunk)
+        if temp_path.stat().st_size == 0:
+            raise ValueError("Файл пустой")
+
+        validation = validate_excel_file(temp_path)
+        temp_path.replace(final_path)
+        record = file_registry.add_valid_upload(
+            original_name=original_name,
+            stored_name=stored_name,
+            path=final_path,
+        )
+        request.session[SESSION_ACTIVE_FILE_KEY] = record.id
+        dashboard_payload_cache.invalidate(record.id)
+        return JSONResponse(
+            {
+                "file": record.to_dict(),
+                "validation": validation.to_dict(),
+                "files": files_payload(request),
+            },
+            status_code=201,
+        )
+    except ValueError as exc:
+        temp_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        file.file.close()
 
 
 @app.get("/", response_class=HTMLResponse, name="index")

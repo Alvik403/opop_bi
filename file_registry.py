@@ -24,6 +24,21 @@ class FileRecord:
     is_latest: bool
     source: str
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "original_name": self.original_name,
+            "stored_name": self.stored_name,
+            "sha256": self.sha256,
+            "size": self.size,
+            "mtime": self.mtime,
+            "uploaded_at": self.uploaded_at,
+            "status": self.status,
+            "validation_error": self.validation_error,
+            "is_latest": self.is_latest,
+            "source": self.source,
+        }
+
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -116,18 +131,20 @@ class FileRegistry:
                     """,
                     (path.name, digest, stat.st_size, stat.st_mtime, existing["id"]),
                 )
-                return self.get_by_id(int(existing["id"]))
+                file_id = int(existing["id"])
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO files (
+                        original_name, stored_name, sha256, size, mtime, uploaded_at,
+                        status, validation_error, is_latest, source
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'valid', NULL, ?, 'default')
+                    """,
+                    (path.name, path.name, digest, stat.st_size, stat.st_mtime, uploaded_at, is_latest),
+                )
+                file_id = int(cursor.lastrowid)
 
-            cursor = conn.execute(
-                """
-                INSERT INTO files (
-                    original_name, stored_name, sha256, size, mtime, uploaded_at,
-                    status, validation_error, is_latest, source
-                ) VALUES (?, ?, ?, ?, ?, ?, 'valid', NULL, ?, 'default')
-                """,
-                (path.name, path.name, digest, stat.st_size, stat.st_mtime, uploaded_at, is_latest),
-            )
-            return self.get_by_id(int(cursor.lastrowid))
+        return self.get_by_id(file_id)
 
     def get_by_id(self, file_id: int) -> FileRecord | None:
         with self.connect() as conn:
@@ -160,3 +177,24 @@ class FileRegistry:
                 "SELECT * FROM files ORDER BY uploaded_at DESC, id DESC"
             ).fetchall()
         return [record for row in rows if (record := self.row_to_record(row)) is not None]
+
+    def add_valid_upload(self, *, original_name: str, stored_name: str, path: Path) -> FileRecord:
+        stat = path.stat()
+        digest = sha256_file(path)
+        uploaded_at = datetime.now(UTC).isoformat()
+        with self.connect() as conn:
+            conn.execute("UPDATE files SET is_latest = 0 WHERE is_latest = 1")
+            cursor = conn.execute(
+                """
+                INSERT INTO files (
+                    original_name, stored_name, sha256, size, mtime, uploaded_at,
+                    status, validation_error, is_latest, source
+                ) VALUES (?, ?, ?, ?, ?, ?, 'valid', NULL, 1, 'upload')
+                """,
+                (original_name, stored_name, digest, stat.st_size, stat.st_mtime, uploaded_at),
+            )
+            file_id = int(cursor.lastrowid)
+        record = self.get_by_id(file_id)
+        if not record:
+            raise RuntimeError("Не удалось зарегистрировать загруженный файл")
+        return record
