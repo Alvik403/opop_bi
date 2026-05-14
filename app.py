@@ -136,7 +136,7 @@ def templated(request: Request, template_name: str, context: dict[str, Any], sta
         "file_context": files_payload(request),
         **context,
     }
-    return templates.TemplateResponse(template_name, ctx, status_code=status_code)
+    return templates.TemplateResponse(request, template_name, ctx, status_code=status_code)
 
 
 def load_dashboard_payload(path: Path) -> tuple[dict, dict, dict]:
