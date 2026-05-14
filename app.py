@@ -21,9 +21,10 @@ from data_loader import (
     load_calculation_services_dataset,
     load_workbook_sheets,
 )
+from settings import BASE_DIR, get_settings
 
-BASE_DIR = Path(__file__).resolve().parent
-EXCEL_PATH = BASE_DIR / "data" / "data.xlsx"
+settings = get_settings()
+EXCEL_PATH = settings.default_excel_path
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app = FastAPI(title="Дашборд ОПиОП", docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json")
@@ -667,8 +668,8 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=False,
+        host=settings.app_host,
+        port=settings.app_port,
+        reload=settings.debug,
         factory=False,
     )

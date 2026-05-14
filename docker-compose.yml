@@ -8,6 +8,13 @@ services:
     container_name: dashboard_web
     ports:
       - "18000:8000"
+    environment:
+      DEBUG: "true"
+      APP_PORT: "8000"
+      DATA_DIR: /app/data
+      UPLOADS_DIR: /app/uploads
+      DATABASE_PATH: /app/runtime/dashboard.sqlite3
+      LOGS_DIR: /app/logs
     volumes:
       - .:/app
     working_dir: /app

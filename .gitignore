@@ -5,6 +5,7 @@ __pycache__/
 
 # Локальный журнал изменений (не коммитить)
 WORK_LOG.local.md
+FUTURE.local.md
 
 .DS_Store
 .idea/
@@ -13,6 +14,12 @@ WORK_LOG.local.md
 # Данные проекта / локальные копии
 data/
 .data/
+uploads/
+runtime/
+logs/
+*.db
+*.sqlite
+*.sqlite3
 
 # Виртуальные окружения
 .venv/
