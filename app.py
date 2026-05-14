@@ -8,7 +8,9 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
+from dashboard_cache import DashboardPayloadCache
 from dashboard_builder import (
     COST_TYPE_META,
     build_cost_scope_data,
@@ -21,13 +23,19 @@ from data_loader import (
     load_calculation_services_dataset,
     load_workbook_sheets,
 )
+from file_registry import FileRecord, FileRegistry
 from settings import BASE_DIR, get_settings
 
 settings = get_settings()
-EXCEL_PATH = settings.default_excel_path
+SESSION_ACTIVE_FILE_KEY = "active_file_id"
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app = FastAPI(title="Дашборд ОПиОП", docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json")
+app.add_middleware(SessionMiddleware, secret_key=settings.session_secret, same_site="lax")
+
+file_registry = FileRegistry(settings)
+file_registry.ensure_default_file(settings.default_excel_path)
+dashboard_payload_cache = DashboardPayloadCache()
 
 
 def money(value: float) -> str:
@@ -91,6 +99,44 @@ def load_dashboard_payload(path: Path) -> tuple[dict, dict, dict]:
     return dataset, overview, navigation
 
 
+def get_active_file(request: Request) -> FileRecord | None:
+    raw_file_id = request.session.get(SESSION_ACTIVE_FILE_KEY)
+    if raw_file_id is not None:
+        try:
+            file_id = int(raw_file_id)
+        except (TypeError, ValueError):
+            request.session.pop(SESSION_ACTIVE_FILE_KEY, None)
+        else:
+            record = file_registry.get_valid_by_id(file_id)
+            if record:
+                return record
+            request.session.pop(SESSION_ACTIVE_FILE_KEY, None)
+
+    record = file_registry.get_latest_valid()
+    if record:
+        request.session[SESSION_ACTIVE_FILE_KEY] = record.id
+    return record
+
+
+def get_active_excel_path(request: Request) -> Path:
+    record = get_active_file(request)
+    if not record:
+        return settings.default_excel_path
+    return file_registry.path_for(record)
+
+
+def load_active_dashboard_payload(request: Request) -> tuple[dict, dict, dict]:
+    record = get_active_file(request)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Файл не найден: {settings.default_excel_path}")
+
+    path = file_registry.path_for(record)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Файл не найден: {path}")
+
+    return dashboard_payload_cache.get(record.id, path, load_dashboard_payload)
+
+
 def get_class_or_404(navigation: dict, class_name: str) -> dict:
     class_row = navigation["class_index"].get(class_name)
     if not class_row:
@@ -152,27 +198,29 @@ def debug_home(request: Request):
 @app.get("/debug/excel", response_class=HTMLResponse, name="excel_debug")
 def excel_debug(request: Request):
     require_debug_enabled()
-    if not EXCEL_PATH.exists():
+    excel_path = get_active_excel_path(request)
+    if not excel_path.exists():
         return templated(
             request,
             "excel_debug.html",
-            {"error": f"Файл не найден: {EXCEL_PATH}", "sheets": []},
+            {"error": f"Файл не найден: {excel_path}", "sheets": []},
         )
-    sheets = load_workbook_sheets(EXCEL_PATH)
+    sheets = load_workbook_sheets(excel_path)
     return templated(request, "excel_debug.html", {"error": None, "sheets": sheets})
 
 
 @app.get("/debug/calculation-services", response_class=HTMLResponse, name="calculation_services_debug")
 def calculation_services_debug(request: Request):
     require_debug_enabled()
-    if not EXCEL_PATH.exists():
+    excel_path = get_active_excel_path(request)
+    if not excel_path.exists():
         return templated(
             request,
             "calculation_services_debug.html",
-            {"error": f"Файл не найден: {EXCEL_PATH}", "class_tables": []},
+            {"error": f"Файл не найден: {excel_path}", "class_tables": []},
         )
     try:
-        class_tables = load_calculation_services_by_class(EXCEL_PATH)
+        class_tables = load_calculation_services_by_class(excel_path)
         return templated(
             request,
             "calculation_services_debug.html",
@@ -192,11 +240,8 @@ def calculation_services_debug(request: Request):
 @app.get("/dashboard", response_class=HTMLResponse, name="dashboard_home")
 def dashboard_home(request: Request):
     url_fn = template_url_for(request)
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
-
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         service_picker = [
             {
                 "label": item["label"],
@@ -237,11 +282,8 @@ def dashboard_home(request: Request):
 @app.get("/dashboard/cost/{cost_key}", response_class=HTMLResponse, name="dashboard_cost_overview")
 def dashboard_cost_overview(request: Request, cost_key: str):
     url_fn = template_url_for(request)
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
-
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         cost_scope = build_cost_scope_data(navigation["services"], cost_key)
         cost_meta = cost_scope["meta"]
 
@@ -304,11 +346,8 @@ def dashboard_cost_overview(request: Request, cost_key: str):
 )
 def dashboard_cost_class(request: Request, cost_key: str, class_name: str):
     url_fn = template_url_for(request)
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
-
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         class_row = get_class_or_404(navigation, class_name)
         cost_scope = build_cost_scope_data(class_row["services"], cost_key)
         global_scope = build_cost_scope_data(navigation["services"], cost_key)
@@ -390,13 +429,11 @@ def dashboard_cost_detail(
     url_fn = template_url_for(request)
     src = (source or "").strip().casefold()
 
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
     if cost_key not in COST_TYPE_META:
         raise HTTPException(status_code=404, detail=f"Тип затрат не найден: {cost_key}")
 
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         class_row = get_class_or_404(navigation, class_name)
         service = get_service_or_404(navigation, class_name, service_name)
         meta = get_cost_meta_or_404(cost_key)
@@ -509,11 +546,8 @@ def dashboard_cost_detail(
 )
 def dashboard_service(request: Request, class_name: str, service_name: str):
     url_fn = template_url_for(request)
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
-
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         class_row = get_class_or_404(navigation, class_name)
         service = get_service_or_404(navigation, class_name, service_name)
 
@@ -603,11 +637,8 @@ def dashboard_service(request: Request, class_name: str, service_name: str):
 @app.get("/dashboard/class/{class_name:path}", response_class=HTMLResponse, name="dashboard_class")
 def dashboard_class(request: Request, class_name: str):
     url_fn = template_url_for(request)
-    if not EXCEL_PATH.exists():
-        return render_dashboard_error(request, f"Файл не найден: {EXCEL_PATH}", status_code=404)
-
     try:
-        _, overview, navigation = load_dashboard_payload(EXCEL_PATH)
+        _, overview, navigation = load_active_dashboard_payload(request)
         class_row = get_class_or_404(navigation, class_name)
         services = class_row["services"]
         service_labels = [service["service_name"] for service in services]
@@ -657,15 +688,16 @@ def dashboard_class(request: Request, class_name: str):
 
 @app.get("/dashboard/legacy", response_class=HTMLResponse, name="dashboard_legacy")
 def dashboard_legacy(request: Request):
-    if not EXCEL_PATH.exists():
+    excel_path = get_active_excel_path(request)
+    if not excel_path.exists():
         return templated(
             request,
             "dashboard.html",
-            {"error": f"Файл не найден: {EXCEL_PATH}", "dashboard": None},
+            {"error": f"Файл не найден: {excel_path}", "dashboard": None},
         )
 
     try:
-        dataset = load_calculation_services_dataset(EXCEL_PATH)
+        dataset = load_calculation_services_dataset(excel_path)
         dashboard_data = build_dashboard_data(dataset)
         return templated(request, "dashboard.html", {"error": None, "dashboard": dashboard_data})
     except Exception as exc:
