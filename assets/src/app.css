@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@source "../../templates/**/*.html";
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable::after {
+  content: " \21D5";
+  color: #9ca3af;
+  font-size: 0.8em;
+  margin-left: 4px;
+}
+
+th.sortable[data-sort-dir="asc"]::after {
+  content: " \2191";
+  color: #0284c7;
+  font-weight: bold;
+}
+
+th.sortable[data-sort-dir="desc"]::after {
+  content: " \2193";
+  color: #0284c7;
+  font-weight: bold;
+}

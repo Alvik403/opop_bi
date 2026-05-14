@@ -35,6 +35,7 @@ env/
 *.egg-info/
 dist/
 build/
+node_modules/
 
 # Инструменты тестирования и покрытия
 .pytest_cache/

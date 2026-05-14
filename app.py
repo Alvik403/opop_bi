@@ -8,6 +8,7 @@ from uuid import uuid4
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -34,6 +35,7 @@ SESSION_ACTIVE_FILE_KEY = "active_file_id"
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app = FastAPI(title="Дашборд ОПиОП", docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json")
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret, same_site="lax")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static"), check_dir=False), name="static")
 
 file_registry = FileRegistry(settings)
 file_registry.ensure_default_file(settings.default_excel_path)

@@ -16,6 +16,9 @@ services:
       DATABASE_PATH: /app/runtime/dashboard.sqlite3
       LOGS_DIR: /app/logs
     volumes:
-      - .:/app
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./runtime:/app/runtime
+      - ./logs:/app/logs
     working_dir: /app
     command: python app.py
