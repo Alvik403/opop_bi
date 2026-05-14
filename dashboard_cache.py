@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
@@ -7,6 +8,7 @@ from typing import Callable
 
 
 Payload = tuple[dict, dict, dict]
+logger = logging.getLogger("opop_bi.cache")
 
 
 @dataclass(frozen=True)
@@ -28,8 +30,10 @@ class DashboardPayloadCache:
         with self._lock:
             cached = self._payloads.get(file_id)
             if cached and cached[0] == key:
+                logger.info("dashboard_cache_hit", extra={"file_id": file_id, "path": str(path)})
                 return cached[1]
 
+        logger.info("dashboard_cache_miss", extra={"file_id": file_id, "path": str(path)})
         payload = loader(path)
         with self._lock:
             self._payloads[file_id] = (key, payload)
@@ -38,6 +42,7 @@ class DashboardPayloadCache:
     def invalidate(self, file_id: int) -> None:
         with self._lock:
             self._payloads.pop(file_id, None)
+        logger.info("dashboard_cache_invalidated", extra={"file_id": file_id})
 
     def clear(self) -> None:
         with self._lock:

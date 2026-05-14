@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -27,9 +29,12 @@ from data_loader import (
 )
 from file_registry import FileRecord, FileRegistry
 from file_validation import validate_excel_file
+from logging_config import configure_logging
 from settings import BASE_DIR, get_settings
 
 settings = get_settings()
+configure_logging(settings)
+logger = logging.getLogger("opop_bi.app")
 SESSION_ACTIVE_FILE_KEY = "active_file_id"
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -40,6 +45,39 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static"), check_dir=F
 file_registry = FileRegistry(settings)
 file_registry.ensure_default_file(settings.default_excel_path)
 dashboard_payload_cache = DashboardPayloadCache()
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or uuid4().hex
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "request_failed",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+            },
+        )
+        raise
+
+    duration_ms = round((time.perf_counter() - started) * 1000, 2)
+    response.headers["x-request-id"] = request_id
+    logger.info(
+        "request_completed",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+        },
+    )
+    return response
 
 
 def money(value: float) -> str:
@@ -151,6 +189,10 @@ def set_active_file(request: Request, file_id: int) -> FileRecord:
     if not record:
         raise HTTPException(status_code=404, detail=f"Файл не найден: {file_id}")
     request.session[SESSION_ACTIVE_FILE_KEY] = record.id
+    logger.info(
+        "active_file_changed",
+        extra={"request_id": getattr(request.state, "request_id", None), "file_id": record.id},
+    )
     return record
 
 
@@ -212,6 +254,44 @@ def api_files(request: Request) -> dict:
     return files_payload(request)
 
 
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready() -> JSONResponse:
+    checks: dict[str, bool | str | None] = {
+        "database": False,
+        "uploads_dir": False,
+        "latest_file": False,
+        "latest_file_id": None,
+    }
+
+    try:
+        with file_registry.connect() as conn:
+            conn.execute("SELECT 1").fetchone()
+        checks["database"] = True
+    except Exception as exc:
+        checks["database_error"] = str(exc)
+
+    uploads_dir = settings.resolved_uploads_dir
+    checks["uploads_dir"] = uploads_dir.exists() and uploads_dir.is_dir()
+
+    latest = file_registry.get_latest_valid()
+    if latest:
+        latest_path = file_registry.path_for(latest)
+        checks["latest_file"] = latest_path.exists()
+        checks["latest_file_id"] = latest.id
+        checks["latest_file_path"] = str(latest_path)
+
+    is_ready = bool(checks["database"] and checks["uploads_dir"] and checks["latest_file"])
+    return JSONResponse(
+        {"status": "ready" if is_ready else "not_ready", "checks": checks},
+        status_code=200 if is_ready else 503,
+    )
+
+
 @app.post("/api/session/active-file/{file_id}")
 def api_set_active_file(request: Request, file_id: int) -> dict:
     record = set_active_file(request, file_id)
@@ -252,6 +332,17 @@ def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONRespo
         )
         request.session[SESSION_ACTIVE_FILE_KEY] = record.id
         dashboard_payload_cache.invalidate(record.id)
+        logger.info(
+            "excel_upload_accepted",
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "file_id": record.id,
+                "original_name": original_name,
+                "stored_name": stored_name,
+                "service_count": validation.service_count,
+                "class_count": validation.class_count,
+            },
+        )
         return JSONResponse(
             {
                 "file": record.to_dict(),
@@ -262,6 +353,14 @@ def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONRespo
         )
     except ValueError as exc:
         temp_path.unlink(missing_ok=True)
+        logger.warning(
+            "excel_upload_rejected",
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "original_name": original_name,
+                "error": str(exc),
+            },
+        )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         file.file.close()
