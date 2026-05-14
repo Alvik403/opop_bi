@@ -79,7 +79,74 @@
         </div>
 
         <div class="flex items-center gap-4 text-sm font-medium">
-          {% block top_actions %}{% endblock %}
+          {% block top_actions %}
+          {% if file_context.has_newer_version %}
+          <span class="hidden sm:inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 border border-amber-200">
+            Доступна новая версия файла
+          </span>
+          {% endif %}
+          <div class="relative" data-file-menu>
+            <button
+              type="button"
+              data-file-menu-toggle
+              class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm hover:text-gray-900 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              title="Файлы и настройки"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <div data-file-menu-panel class="hidden absolute right-0 mt-3 w-96 max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-4 text-sm shadow-xl z-50">
+              <div class="flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
+                <div>
+                  <p class="font-semibold text-gray-900">Файлы данных</p>
+                  <p class="text-xs text-gray-500">Выбор действует только в этой сессии.</p>
+                </div>
+                {% if file_context.has_newer_version %}
+                <span class="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">new</span>
+                {% endif %}
+              </div>
+
+              <div class="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                {% for file in file_context.files %}
+                <div class="rounded-xl border {% if file.id == file_context.active_file_id %}border-brand-200 bg-brand-50{% elif file.is_latest %}border-amber-200 bg-amber-50{% else %}border-gray-100 bg-gray-50{% endif %} p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-gray-900">{{ file.original_name }}</p>
+                      <p class="mt-1 text-xs text-gray-500">#{{ file.id }} · {{ (file.size / 1024)|round(1) }} KB</p>
+                      <div class="mt-2 flex flex-wrap gap-1">
+                        {% if file.id == file_context.active_file_id %}
+                        <span class="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">активен</span>
+                        {% endif %}
+                        {% if file.is_latest %}
+                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">последний</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% if file.status == "valid" and file.id != file_context.active_file_id %}
+                    <button type="button" data-file-select="{{ file.id }}" class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-200 hover:border-brand-300 hover:text-brand-700">
+                      Выбрать
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% else %}
+                <p class="rounded-xl bg-gray-50 p-3 text-gray-500">Файлы пока не зарегистрированы.</p>
+                {% endfor %}
+              </div>
+
+              <form data-file-upload-form class="mt-4 rounded-xl border border-dashed border-gray-300 p-3">
+                <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Добавить Excel</label>
+                <input name="file" type="file" accept=".xlsx" class="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100" />
+                <button type="submit" class="mt-3 w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+                  Проверить и загрузить
+                </button>
+                <p data-file-upload-status class="mt-2 text-xs text-gray-500"></p>
+              </form>
+            </div>
+          </div>
+          {% endblock %}
         </div>
       </div>
     </header>
@@ -209,6 +276,78 @@
               rows.forEach((row) => tbody.appendChild(row));
             });
           });
+        });
+      })();
+    </script>
+    <script>
+      (function () {
+        const root = document.querySelector("[data-file-menu]");
+        if (!root) return;
+
+        const toggle = root.querySelector("[data-file-menu-toggle]");
+        const panel = root.querySelector("[data-file-menu-panel]");
+        const uploadForm = root.querySelector("[data-file-upload-form]");
+        const uploadStatus = root.querySelector("[data-file-upload-status]");
+
+        const showStatus = (message, isError = false) => {
+          if (!uploadStatus) return;
+          uploadStatus.textContent = message || "";
+          uploadStatus.className = `mt-2 text-xs ${isError ? "text-red-600" : "text-gray-500"}`;
+        };
+
+        toggle?.addEventListener("click", () => {
+          panel?.classList.toggle("hidden");
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!panel || !toggle) return;
+          if (root.contains(event.target)) return;
+          panel.classList.add("hidden");
+        });
+
+        root.querySelectorAll("[data-file-select]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            button.disabled = true;
+            try {
+              const response = await fetch(`/api/session/active-file/${button.dataset.fileSelect}`, {
+                method: "POST",
+              });
+              if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(payload.detail || "Не удалось выбрать файл");
+              }
+              window.location.reload();
+            } catch (error) {
+              showStatus(error.message, true);
+              button.disabled = false;
+            }
+          });
+        });
+
+        uploadForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const fileInput = uploadForm.querySelector('input[type="file"]');
+          if (!fileInput?.files?.length) {
+            showStatus("Выберите .xlsx файл", true);
+            return;
+          }
+
+          const formData = new FormData(uploadForm);
+          showStatus("Проверяем структуру файла...");
+          try {
+            const response = await fetch("/api/files/upload", {
+              method: "POST",
+              body: formData,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              throw new Error(payload.detail || "Файл не прошёл проверку");
+            }
+            showStatus("Файл загружен. Обновляем дашборд...");
+            window.location.reload();
+          } catch (error) {
+            showStatus(error.message, true);
+          }
         });
       })();
     </script>

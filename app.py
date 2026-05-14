@@ -90,7 +90,12 @@ def template_url_for(request: Request):
 
 
 def templated(request: Request, template_name: str, context: dict[str, Any], status_code: int = 200) -> HTMLResponse:
-    ctx = {"request": request, "url_for": template_url_for(request), **context}
+    ctx = {
+        "request": request,
+        "url_for": template_url_for(request),
+        "file_context": files_payload(request),
+        **context,
+    }
     return templates.TemplateResponse(template_name, ctx, status_code=status_code)
 
 
