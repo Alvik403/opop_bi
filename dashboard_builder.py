@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
-from flask import abort
+from fastapi import HTTPException
 
 try:
     from .data_loader import load_calculation_services_dataset
@@ -352,7 +352,7 @@ def calc_totals(services: list[dict]) -> dict:
 def get_cost_meta_or_404(cost_key: str) -> dict:
     meta = COST_TYPE_META.get(cost_key)
     if not meta:
-        abort(404, description=f"Тип затрат не найден: {cost_key}")
+        raise HTTPException(status_code=404, detail=f"Тип затрат не найден: {cost_key}")
     return meta
 
 

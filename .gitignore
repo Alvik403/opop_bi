@@ -2,8 +2,34 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Локальный журнал изменений (не коммитить)
+WORK_LOG.local.md
+
 .DS_Store
 .idea/
 .vscode/
+
+# Данные проекта / локальные копии
 data/
-.data/*
+.data/
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Секреты и локальный конфиг
+.env
+.env.*
+!.env.example
+
+# Сборки / метаданные пакета
+*.egg-info/
+dist/
+build/
+
+# Инструменты тестирования и покрытия
+.pytest_cache/
+.coverage
+htmlcov/
