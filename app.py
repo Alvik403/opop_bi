@@ -6,7 +6,7 @@ from urllib.parse import quote, urlencode
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from dashboard_builder import (
@@ -135,11 +135,23 @@ async def dashboard_http_exception_handler(request: Request, exc: HTTPException)
 
 @app.get("/", response_class=HTMLResponse, name="index")
 def index(request: Request):
-    return templated(request, "index.html", {})
+    return RedirectResponse(url=template_url_for(request)("dashboard_home"), status_code=307)
 
 
-@app.get("/excel-debug", response_class=HTMLResponse)
+def require_debug_enabled() -> None:
+    if not settings.debug:
+        raise HTTPException(status_code=404, detail="Debug-раздел отключён")
+
+
+@app.get("/debug", response_class=HTMLResponse, name="debug_home")
+def debug_home(request: Request):
+    require_debug_enabled()
+    return templated(request, "debug_home.html", {})
+
+
+@app.get("/debug/excel", response_class=HTMLResponse, name="excel_debug")
 def excel_debug(request: Request):
+    require_debug_enabled()
     if not EXCEL_PATH.exists():
         return templated(
             request,
@@ -150,8 +162,9 @@ def excel_debug(request: Request):
     return templated(request, "excel_debug.html", {"error": None, "sheets": sheets})
 
 
-@app.get("/calculation-services-debug", response_class=HTMLResponse)
+@app.get("/debug/calculation-services", response_class=HTMLResponse, name="calculation_services_debug")
 def calculation_services_debug(request: Request):
+    require_debug_enabled()
     if not EXCEL_PATH.exists():
         return templated(
             request,

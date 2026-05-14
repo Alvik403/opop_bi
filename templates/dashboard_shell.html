@@ -78,10 +78,8 @@
           {% block top_search %}{% endblock %}
         </div>
 
-        <!-- Right Side Nav -->
         <div class="flex items-center gap-4 text-sm font-medium">
-          <a href="{{ url_for('dashboard_legacy') }}" class="text-gray-500 hover:text-gray-900 transition-colors">Legacy View</a>
-          <a href="/calculation-services-debug" class="text-gray-500 hover:text-gray-900 transition-colors">Debug</a>
+          {% block top_actions %}{% endblock %}
         </div>
       </div>
     </header>
