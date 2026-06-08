@@ -13,6 +13,7 @@ docker compose up --build -d
 
 - `http://localhost:18000/` — редирект на дашборд.
 - `http://localhost:18000/dashboard` — основной дашборд.
+- `http://localhost:18000/dashboard/excel` — Excel-подобный просмотр и редактирование активной книги.
 - `http://localhost:18000/api/docs` — Swagger / OpenAPI.
 - `http://localhost:18000/health` — liveness.
 - `http://localhost:18000/ready` — readiness.
@@ -47,6 +48,8 @@ docker compose up --build -d
 
 Если пользователь загружает новый валидный файл, он становится активным только у него. У остальных пользователей текущий выбор не меняется, но появляется плашка о новой версии.
 
+Слева в дашборде есть вкладка `Просмотр Excel`. Она открывает активный `.xlsx` в браузерном редакторе на базе Univer: доступны листы книги, сетка ячеек, редактирование и сохранение результата как новой версии. Сохранение проходит ту же серверную проверку структуры, что и обычная загрузка файла. Макросы, внешние ссылки и часть сложного форматирования могут не сохраниться в open-source браузерном импорте/экспорте.
+
 ## Frontend assets
 
 Tailwind и JS собираются локально через Vite:
@@ -75,7 +78,8 @@ docker compose run --rm web pytest -q
 - редирект `/` → `/dashboard`;
 - debug mode;
 - маршруты с `/` внутри имени класса/услуги;
-- session-scoped active file.
+- session-scoped active file;
+- страница и API Excel-редактора.
 
 ## Ручной smoke-check
 
@@ -84,8 +88,10 @@ docker compose run --rm web pytest -q
 3. Загрузить валидный `.xlsx`; он должен стать активным в текущей сессии.
 4. Загрузить невалидный файл; должна появиться понятная ошибка, файл не должен стать доступным.
 5. Выбрать прошлый файл из истории; latest не меняется глобально.
-6. Проверить `/health` и `/ready`.
-7. При `DEBUG=true` открыть `/debug`, `/debug/excel`, `/debug/calculation-services`.
+6. Открыть `/dashboard/excel`, изменить ячейку и нажать `Сохранить как новую версию`.
+7. Вернуться на `/dashboard` и убедиться, что активным стал новый файл.
+8. Проверить `/health` и `/ready`.
+9. При `DEBUG=true` открыть `/debug`, `/debug/excel`, `/debug/calculation-services`.
 
 ## Git flow
 

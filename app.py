@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -134,6 +134,7 @@ def templated(request: Request, template_name: str, context: dict[str, Any], sta
         "request": request,
         "url_for": template_url_for(request),
         "file_context": files_payload(request),
+        "current_nav_tab": "dashboard",
         **context,
     }
     return templates.TemplateResponse(request, template_name, ctx, status_code=status_code)
@@ -205,6 +206,66 @@ def files_payload(request: Request) -> dict:
         "has_newer_version": bool(active and latest and active.id != latest.id),
         "files": [record.to_dict() for record in file_registry.list_files()],
     }
+
+
+def store_valid_excel_upload(
+    request: Request,
+    file: UploadFile,
+    *,
+    original_name: str,
+    accepted_event: str,
+    rejected_event: str,
+) -> tuple[FileRecord, Any]:
+    if not original_name:
+        raise HTTPException(status_code=400, detail="Имя файла не передано")
+    if Path(original_name).suffix.casefold() != ".xlsx":
+        raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx")
+
+    incoming_dir = settings.resolved_uploads_dir / ".incoming"
+    incoming_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid4().hex}.xlsx"
+    temp_path = incoming_dir / stored_name
+    final_path = settings.resolved_uploads_dir / stored_name
+
+    try:
+        with temp_path.open("wb") as output:
+            while chunk := file.file.read(1024 * 1024):
+                output.write(chunk)
+        if temp_path.stat().st_size == 0:
+            raise ValueError("Файл пустой")
+
+        validation = validate_excel_file(temp_path)
+        temp_path.replace(final_path)
+        record = file_registry.add_valid_upload(
+            original_name=original_name,
+            stored_name=stored_name,
+            path=final_path,
+        )
+        request.session[SESSION_ACTIVE_FILE_KEY] = record.id
+        dashboard_payload_cache.invalidate(record.id)
+        logger.info(
+            accepted_event,
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "file_id": record.id,
+                "original_name": original_name,
+                "stored_name": stored_name,
+                "service_count": validation.service_count,
+                "class_count": validation.class_count,
+            },
+        )
+        return record, validation
+    except ValueError as exc:
+        temp_path.unlink(missing_ok=True)
+        logger.warning(
+            rejected_event,
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "original_name": original_name,
+                "error": str(exc),
+            },
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def get_class_or_404(navigation: dict, class_name: str) -> dict:
@@ -302,46 +363,31 @@ def api_set_active_file(request: Request, file_id: int) -> dict:
     }
 
 
-@app.post("/api/files/upload")
-def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONResponse:
-    original_name = Path(file.filename or "").name
-    if not original_name:
-        raise HTTPException(status_code=400, detail="Имя файла не передано")
-    if Path(original_name).suffix.casefold() != ".xlsx":
-        raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx")
+@app.get("/api/excel/active", name="api_excel_active")
+def api_excel_active(request: Request) -> FileResponse:
+    record = get_active_file(request)
+    if not record:
+        raise HTTPException(status_code=404, detail="Активный Excel-файл не найден")
+    path = file_registry.path_for(record)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Файл не найден: {path}")
+    return FileResponse(
+        path,
+        filename=record.original_name,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
-    incoming_dir = settings.resolved_uploads_dir / ".incoming"
-    incoming_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"{uuid4().hex}.xlsx"
-    temp_path = incoming_dir / stored_name
-    final_path = settings.resolved_uploads_dir / stored_name
 
+@app.post("/api/excel/save-version")
+def api_excel_save_version(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    original_name = Path(file.filename or "excel-editor-version.xlsx").name
     try:
-        with temp_path.open("wb") as output:
-            while chunk := file.file.read(1024 * 1024):
-                output.write(chunk)
-        if temp_path.stat().st_size == 0:
-            raise ValueError("Файл пустой")
-
-        validation = validate_excel_file(temp_path)
-        temp_path.replace(final_path)
-        record = file_registry.add_valid_upload(
+        record, validation = store_valid_excel_upload(
+            request,
+            file,
             original_name=original_name,
-            stored_name=stored_name,
-            path=final_path,
-        )
-        request.session[SESSION_ACTIVE_FILE_KEY] = record.id
-        dashboard_payload_cache.invalidate(record.id)
-        logger.info(
-            "excel_upload_accepted",
-            extra={
-                "request_id": getattr(request.state, "request_id", None),
-                "file_id": record.id,
-                "original_name": original_name,
-                "stored_name": stored_name,
-                "service_count": validation.service_count,
-                "class_count": validation.class_count,
-            },
+            accepted_event="excel_editor_version_saved",
+            rejected_event="excel_editor_version_rejected",
         )
         return JSONResponse(
             {
@@ -351,17 +397,29 @@ def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONRespo
             },
             status_code=201,
         )
-    except ValueError as exc:
-        temp_path.unlink(missing_ok=True)
-        logger.warning(
-            "excel_upload_rejected",
-            extra={
-                "request_id": getattr(request.state, "request_id", None),
-                "original_name": original_name,
-                "error": str(exc),
-            },
+    finally:
+        file.file.close()
+
+
+@app.post("/api/files/upload")
+def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    original_name = Path(file.filename or "").name
+    try:
+        record, validation = store_valid_excel_upload(
+            request,
+            file,
+            original_name=original_name,
+            accepted_event="excel_upload_accepted",
+            rejected_event="excel_upload_rejected",
         )
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return JSONResponse(
+            {
+                "file": record.to_dict(),
+                "validation": validation.to_dict(),
+                "files": files_payload(request),
+            },
+            status_code=201,
+        )
     finally:
         file.file.close()
 
@@ -464,6 +522,31 @@ def dashboard_home(request: Request):
         raise
     except Exception as exc:
         return render_dashboard_error(request, f"Ошибка построения дашборда: {exc}")
+
+
+@app.get("/dashboard/excel", response_class=HTMLResponse, name="dashboard_excel_editor")
+def dashboard_excel_editor(request: Request):
+    record = get_active_file(request)
+    if not record:
+        return render_dashboard_error(request, "Активный Excel-файл не найден", status_code=404)
+    path = file_registry.path_for(record)
+    if not path.exists():
+        return render_dashboard_error(request, f"Файл не найден: {path}", status_code=404)
+
+    return templated(
+        request,
+        "dashboard_excel_editor.html",
+        {
+            "active_file": record.to_dict(),
+            "current_nav_tab": "excel",
+            "current_level": 0,
+            "current_class_name": None,
+            "current_service_name": None,
+            "current_cost_title": None,
+            "current_cost_key": None,
+            "navigation_mode": "excel",
+        },
+    )
 
 
 @app.get("/dashboard/cost/{cost_key}", response_class=HTMLResponse, name="dashboard_cost_overview")

@@ -55,11 +55,54 @@ function initFileMenu() {
   const panel = root.querySelector("[data-file-menu-panel]");
   const uploadForm = root.querySelector("[data-file-upload-form]");
   const uploadStatus = root.querySelector("[data-file-upload-status]");
+  const uploadButton = root.querySelector("[data-file-upload-button]");
+  const dropZone = root.querySelector("[data-file-drop-zone]");
+  const dropMessage = root.querySelector("[data-file-drop-message]");
+  const fileInput = uploadForm?.querySelector('input[type="file"]');
+  const selectedName = root.querySelector("[data-file-selected-name]");
+  let selectedFile = null;
 
-  const showStatus = (message, isError = false) => {
+  const showStatus = (message, variant = "neutral") => {
     if (!uploadStatus) return;
     uploadStatus.textContent = message || "";
-    uploadStatus.className = `mt-2 text-xs ${isError ? "text-red-600" : "text-gray-500"}`;
+    const colorByVariant = {
+      neutral: "text-gray-500",
+      error: "text-red-600",
+      success: "text-green-700",
+      progress: "text-brand-700",
+    };
+    uploadStatus.className = `mt-2 text-xs ${colorByVariant[variant] || colorByVariant.neutral}`;
+  };
+
+  const setUploading = (isUploading) => {
+    if (!uploadButton) return;
+    uploadButton.disabled = isUploading;
+    uploadButton.textContent = isUploading ? "Проверяем и загружаем..." : "Проверить и загрузить";
+  };
+
+  const setSelectedFile = (file, source = "selected") => {
+    if (!file) return false;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      showStatus("Нужен файл .xlsx", "error");
+      return false;
+    }
+    selectedFile = file;
+    if (selectedName) {
+      selectedName.textContent = `Выбран файл: ${file.name}`;
+      selectedName.classList.remove("hidden");
+    }
+    if (dropMessage) {
+      const sourceLabels = {
+        dropped: "Файл добавлен перетаскиванием",
+        pasted: "Файл добавлен из буфера",
+        selected: "Файл выбран",
+      };
+      dropMessage.textContent = `${sourceLabels[source] || "Файл выбран"}: ${file.name}`;
+      dropMessage.classList.remove("border-gray-300", "bg-gray-50", "text-gray-500");
+      dropMessage.classList.add("border-brand-200", "bg-brand-50", "text-brand-700");
+    }
+    showStatus("Готов к загрузке. Нажмите «Проверить и загрузить».", "neutral");
+    return true;
   };
 
   toggle?.addEventListener("click", () => {
@@ -85,22 +128,53 @@ function initFileMenu() {
         }
         window.location.reload();
       } catch (error) {
-        showStatus(error.message, true);
+        showStatus(error.message, "error");
         button.disabled = false;
       }
     });
   });
 
+  fileInput?.addEventListener("change", () => {
+    setSelectedFile(fileInput.files?.[0], "selected");
+  });
+
+  dropZone?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropZone.classList.add("border-brand-400", "bg-brand-50");
+  });
+
+  dropZone?.addEventListener("dragleave", () => {
+    dropZone.classList.remove("border-brand-400", "bg-brand-50");
+  });
+
+  dropZone?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dropZone.classList.remove("border-brand-400", "bg-brand-50");
+    setSelectedFile(event.dataTransfer?.files?.[0], "dropped");
+  });
+
+  document.addEventListener("paste", (event) => {
+    if (panel?.classList.contains("hidden")) return;
+    const pastedFile = Array.from(event.clipboardData?.files || []).find((file) =>
+      file.name.toLowerCase().endsWith(".xlsx"),
+    );
+    if (!pastedFile) return;
+    event.preventDefault();
+    setSelectedFile(pastedFile, "pasted");
+  });
+
   uploadForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const fileInput = uploadForm.querySelector('input[type="file"]');
-    if (!fileInput?.files?.length) {
-      showStatus("Выберите .xlsx файл", true);
+    const file = selectedFile || fileInput?.files?.[0];
+    if (!file) {
+      showStatus("Выберите, перетащите или вставьте .xlsx файл", "error");
       return;
     }
 
-    const formData = new FormData(uploadForm);
-    showStatus("Проверяем структуру файла...");
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    showStatus("Файл отправлен. Проверяем структуру на сервере...", "progress");
     try {
       const response = await fetch("/api/files/upload", {
         method: "POST",
@@ -110,10 +184,11 @@ function initFileMenu() {
       if (!response.ok) {
         throw new Error(payload.detail || "Файл не прошёл проверку");
       }
-      showStatus("Файл загружен. Обновляем дашборд...");
-      window.location.reload();
+      showStatus("Файл загружен и выбран активным для этой сессии. Обновляем дашборд...", "success");
+      window.setTimeout(() => window.location.reload(), 700);
     } catch (error) {
-      showStatus(error.message, true);
+      showStatus(error.message, "error");
+      setUploading(false);
     }
   });
 }

@@ -8,10 +8,13 @@ export default defineConfig({
     outDir: "static/dist",
     emptyOutDir: true,
     rollupOptions: {
-      input: "assets/src/app.js",
+      input: {
+        app: "assets/src/app.js",
+        excel: "assets/src/excel.js",
+      },
       output: {
-        entryFileNames: "app.js",
-        assetFileNames: "app.[ext]",
+        entryFileNames: "[name].js",
+        assetFileNames: "[name].[ext]",
       },
     },
   },
