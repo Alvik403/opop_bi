@@ -3,10 +3,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Локальный журнал изменений (не коммитить)
-WORK_LOG.local.md
-FUTURE.local.md
-
 .DS_Store
 .idea/
 .vscode/

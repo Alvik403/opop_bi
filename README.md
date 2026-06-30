@@ -1,5 +1,7 @@
 # Дашборд ОПиОП
 
+**v1.0** — первая стабильная версия.
+
 FastAPI BI-дашборд для построения витрин по Excel-файлам с листом `Калькуляция`.
 Приложение поддерживает историю загруженных `.xlsx`, выбор активного файла в текущей сессии, кеширование данных по `mtime/size`, debug-раздел, health/readiness и автотесты.
 
@@ -93,20 +95,7 @@ docker compose run --rm web pytest -q
 8. Проверить `/health` и `/ready`.
 9. При `DEBUG=true` открыть `/debug`, `/debug/excel`, `/debug/calculation-services`.
 
-## Git flow
+## Версии
 
-- `main` — стабильная ветка.
-- `develop` — интеграционная ветка разработки.
-- `feature/<name>` — задачи.
-
-Пример цикла:
-
-```bash
-git switch develop
-git switch -c feature/my-task
-# изменения...
-git add -A
-git commit -m "feat: my task"
-git switch develop
-git merge --no-ff feature/my-task
-```
+- **v1.0** — первая стабильная версия: FastAPI-дашборд, загрузка Excel, браузерный редактор Univer, health/readiness, автотесты.
+- Актуальный код — в ветке `main`.

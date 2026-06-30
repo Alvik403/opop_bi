@@ -956,28 +956,6 @@ def dashboard_class(request: Request, class_name: str):
         return render_dashboard_error(request, f"Ошибка построения страницы класса: {exc}")
 
 
-@app.get("/dashboard/legacy", response_class=HTMLResponse, name="dashboard_legacy")
-def dashboard_legacy(request: Request):
-    excel_path = get_active_excel_path(request)
-    if not excel_path.exists():
-        return templated(
-            request,
-            "dashboard.html",
-            {"error": f"Файл не найден: {excel_path}", "dashboard": None},
-        )
-
-    try:
-        dataset = load_calculation_services_dataset(excel_path)
-        dashboard_data = build_dashboard_data(dataset)
-        return templated(request, "dashboard.html", {"error": None, "dashboard": dashboard_data})
-    except Exception as exc:
-        return templated(
-            request,
-            "dashboard.html",
-            {"error": f"Ошибка построения дашборда: {exc}", "dashboard": None},
-        )
-
-
 if __name__ == "__main__":
     import uvicorn
 
