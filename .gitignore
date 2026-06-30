@@ -2,7 +2,38 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
 .DS_Store
 .idea/
 .vscode/
+
+# Данные проекта / локальные копии
 data/
+.data/
+uploads/
+runtime/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Виртуальные окружения
+.venv/
+venv/
+env/
+
+# Секреты и локальный конфиг
+.env
+.env.*
+!.env.example
+
+# Сборки / метаданные пакета
+*.egg-info/
+dist/
+build/
+node_modules/
+
+# Инструменты тестирования и покрытия
+.pytest_cache/
+.coverage
+htmlcov/

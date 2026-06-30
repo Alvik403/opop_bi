@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@source "../../templates/**/*.html";
+
+@theme {
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+  --color-ineff-light: #fff7ed;
+  --color-ineff-border: #fed7aa;
+  --color-ineff-text: #c2410c;
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable::after {
+  content: " \21D5";
+  color: #9ca3af;
+  font-size: 0.8em;
+  margin-left: 4px;
+}
+
+th.sortable[data-sort-dir="asc"]::after {
+  content: " \2191";
+  color: #0284c7;
+  font-weight: bold;
+}
+
+th.sortable[data-sort-dir="desc"]::after {
+  content: " \2193";
+  color: #0284c7;
+  font-weight: bold;
+}
