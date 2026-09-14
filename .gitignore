@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+.cursor/
 
 # Данные проекта / локальные копии
 data/
@@ -26,6 +27,8 @@ env/
 .env
 .env.*
 !.env.example
+*.pem
+backups/
 
 # Сборки / метаданные пакета
 *.egg-info/
@@ -37,3 +40,13 @@ node_modules/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Одноразовые генераторы чек-листов СБ (не продукт)
+scripts/dump_*.py
+scripts/fill_network_*.py
+scripts/build_ideal_*.py
+scripts/verify_ideal.py
+scripts/insert_user_scheme.py
+scripts/build_unified_docs.py
+scripts/_template_dump.txt
+*.docx

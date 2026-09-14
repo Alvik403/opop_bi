@@ -1,0 +1,27 @@
+name: opop-bi-dev
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opop_bi_web_dev
+    ports:
+      - "127.0.0.1:18000:8000"
+    environment:
+      DEBUG: "true"
+      ALLOW_INSECURE_DEBUG: "true"
+      APP_PORT: "8000"
+      SESSION_SECRET: "dev-only-session-secret-not-for-production"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DATA_DIR: /app/data
+      UPLOADS_DIR: /app/uploads
+      DATABASE_PATH: /app/runtime/dashboard.sqlite3
+      LOGS_DIR: /app/logs
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./runtime:/app/runtime
+      - ./logs:/app/logs
+    working_dir: /app
+    command: python app.py

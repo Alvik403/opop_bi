@@ -1,16 +1,43 @@
-name: dashboard-opiop
+name: opop-bi
 
 services:
+  init-permissions:
+    image: alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - chown -R 10001:10001 /app/data /app/uploads /app/runtime /app/logs
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./runtime:/app/runtime
+      - ./logs:/app/logs
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: dashboard_web
-    ports:
-      - "18000:8000"
+    container_name: opop_bi_web
+    restart: unless-stopped
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+    env_file:
+      - .env
     environment:
-      DEBUG: "true"
+      DEBUG: "false"
       APP_PORT: "8000"
+      ALLOWED_HOSTS: "${SERVER_NAME:-localhost},localhost,127.0.0.1"
       DATA_DIR: /app/data
       UPLOADS_DIR: /app/uploads
       DATABASE_PATH: /app/runtime/dashboard.sqlite3
@@ -22,3 +49,71 @@ services:
       - ./logs:/app/logs
     working_dir: /app
     command: python app.py
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+
+  nginx:
+    image: nginxinc/nginx-unprivileged:stable-alpine@sha256:adf5042a17f4ecdd200c595fa9ffd1be37efb18f89a830bd1a00e4ab4d59d42c
+    container_name: opop_bi_nginx
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      SERVER_NAME: "${SERVER_NAME:-localhost}"
+      MONITORING_CIDR: "${MONITORING_CIDR:-10.0.0.0/8}"
+      NGINX_ENVSUBST_FILTER: "^(SERVER_NAME|MONITORING_CIDR)$"
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/proxy_params:/etc/nginx/proxy_params:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+      - /var/cache/nginx:size=32m,noexec,nosuid,nodev
+      - /var/run:size=4m,nosuid,nodev
+      - /etc/nginx/conf.d:size=4m,nosuid,nodev,uid=101,gid=101,mode=0755
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - edge
+      - backend
+
+networks:
+  edge:
+  backend:
+    internal: true
