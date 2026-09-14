@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+from openpyxl import Workbook
+
 from data_loader import load_calculation_services_dataset
 
 
@@ -15,3 +20,13 @@ def test_load_calculation_services_dataset(sample_excel_path):
     assert dataset["direct_detail_labels"]
     assert dataset["indirect_detail_labels"]
     assert dataset["inefficiency_detail_labels"]
+
+
+def test_load_calculation_requires_named_sheet(tmp_path: Path):
+    path = tmp_path / "other.xlsx"
+    workbook = Workbook()
+    workbook.active.title = "Прочее"
+    workbook.save(path)
+
+    with pytest.raises(ValueError, match="нет листа 'Калькуляция'"):
+        load_calculation_services_dataset(path)

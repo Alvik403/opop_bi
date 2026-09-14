@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
+
+from conftest import csrf_headers, load_app
 
 
 def test_root_redirects_to_dashboard(app_client):
@@ -58,7 +60,10 @@ def test_active_file_cookie_does_not_change_latest(app_client):
     files_before = app_client.get("/api/files").json()
     latest_id = files_before["latest_file_id"]
 
-    response = app_client.post(f"/api/session/active-file/{latest_id}")
+    response = app_client.post(
+        f"/api/session/active-file/{latest_id}",
+        headers=csrf_headers(app_client),
+    )
     files_after = response.json()["files"]
 
     assert response.status_code == 200
@@ -74,6 +79,7 @@ def test_excel_save_version_updates_latest_for_current_session_only(app_client, 
         with sample_excel_path.open("rb") as workbook:
             response = app_client.post(
                 "/api/excel/save-version",
+                headers=csrf_headers(app_client),
                 files={
                     "file": (
                         "edited.xlsx",
@@ -93,3 +99,23 @@ def test_excel_save_version_updates_latest_for_current_session_only(app_client, 
         assert other_after["active_file_id"] == other_active_id
         assert other_after["latest_file_id"] == new_file_id
         assert other_after["has_newer_version"] is True
+
+
+def test_api_404_returns_json_not_html(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "data.xlsx").write_bytes(b"not-an-xlsx")
+    with load_app(
+        monkeypatch,
+        tmp_path,
+        DEBUG="true",
+        ALLOW_INSECURE_DEBUG="true",
+        AUTH_USERNAME="",
+        AUTH_PASSWORD="",
+        SESSION_SECRET="test-secret",
+        MAX_UPLOAD_BYTES="52428800",
+    ) as client:
+        response = client.get("/api/excel/active")
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert "text/html" not in response.headers["content-type"]
