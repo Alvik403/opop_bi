@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 from datetime import UTC, datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +45,11 @@ class JsonFormatter(logging.Formatter):
                 "threadName",
             }:
                 continue
-            payload[key] = value
+            lowered = key.casefold()
+            if any(marker in lowered for marker in ("password", "secret", "token", "authorization", "cookie")):
+                payload[key] = "[REDACTED]"
+            else:
+                payload[key] = value
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False, default=str)
@@ -57,8 +62,6 @@ class ErrorOnlyFilter(logging.Filter):
 
 def configure_logging(settings: Settings) -> None:
     logs_dir: Path = settings.resolved_logs_dir
-    logs_dir.mkdir(parents=True, exist_ok=True)
-
     formatter = JsonFormatter()
     root = logging.getLogger()
     root.setLevel(logging.INFO)
@@ -68,11 +71,25 @@ def configure_logging(settings: Settings) -> None:
     stdout_handler.setFormatter(formatter)
     root.addHandler(stdout_handler)
 
-    app_handler = logging.FileHandler(logs_dir / "app.log", encoding="utf-8")
-    app_handler.setFormatter(formatter)
-    root.addHandler(app_handler)
+    try:
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        app_handler = RotatingFileHandler(
+            logs_dir / "app.log",
+            maxBytes=settings.log_max_bytes,
+            backupCount=settings.log_backup_count,
+            encoding="utf-8",
+        )
+        app_handler.setFormatter(formatter)
+        root.addHandler(app_handler)
 
-    error_handler = logging.FileHandler(logs_dir / "errors.log", encoding="utf-8")
-    error_handler.setFormatter(formatter)
-    error_handler.addFilter(ErrorOnlyFilter())
-    root.addHandler(error_handler)
+        error_handler = RotatingFileHandler(
+            logs_dir / "errors.log",
+            maxBytes=settings.log_max_bytes,
+            backupCount=settings.log_backup_count,
+            encoding="utf-8",
+        )
+        error_handler.setFormatter(formatter)
+        error_handler.addFilter(ErrorOnlyFilter())
+        root.addHandler(error_handler)
+    except OSError as exc:
+        root.warning("file_logging_disabled", extra={"error": str(exc), "logs_dir": str(logs_dir)})

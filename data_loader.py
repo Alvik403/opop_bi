@@ -61,11 +61,24 @@ def build_class_tables_from_services(services: list[dict]) -> list[dict]:
     return list(grouped.values())
 
 
+CALCULATION_SHEET_NAME = "Калькуляция"
+
+
 def load_calculation_services_dataset(path: Path) -> dict:
-    df = pd.read_excel(path, sheet_name=0, header=[2, 3], engine="openpyxl")
+    try:
+        df = pd.read_excel(
+            path,
+            sheet_name=CALCULATION_SHEET_NAME,
+            header=[2, 3],
+            engine="openpyxl",
+        )
+    except ValueError as exc:
+        raise ValueError(f"В книге нет листа '{CALCULATION_SHEET_NAME}'.") from exc
     columns = list(df.columns)
     if len(columns) < 25:
-        raise ValueError("Лист 'Калькуляция' имеет неожиданную структуру колонок.")
+        raise ValueError(
+            f"Лист '{CALCULATION_SHEET_NAME}' имеет неожиданную структуру колонок."
+        )
 
     number_col = columns[0]
     class_col = columns[1]

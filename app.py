@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
+import os
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -13,6 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from dashboard_cache import DashboardPayloadCache
 from dashboard_builder import (
@@ -28,8 +33,18 @@ from data_loader import (
     load_workbook_sheets,
 )
 from file_registry import FileRecord, FileRegistry
-from file_validation import validate_excel_file
+from file_validation import ValidationResult
 from logging_config import configure_logging
+from security import (
+    AuthLockout,
+    BasicAuthMiddleware,
+    RateLimitExceeded,
+    SecurityHeadersMiddleware,
+    UploadRateLimiter,
+    enforce_csrf,
+    enforce_upload_rate_limit,
+    get_or_create_csrf_token,
+)
 from settings import BASE_DIR, get_settings
 
 settings = get_settings()
@@ -38,13 +53,42 @@ logger = logging.getLogger("opop_bi.app")
 SESSION_ACTIVE_FILE_KEY = "active_file_id"
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-app = FastAPI(title="Дашборд ОПиОП", docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json")
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret, same_site="lax")
+app = FastAPI(
+    title="Дашборд ОПиОП",
+    docs_url="/api/docs" if settings.expose_openapi else None,
+    redoc_url="/api/redoc" if settings.expose_openapi else None,
+    openapi_url="/api/openapi.json" if settings.expose_openapi else None,
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret,
+    same_site="lax",
+    https_only=not settings.debug,
+)
+app.add_middleware(SecurityHeadersMiddleware)
+if settings.auth_enabled:
+    app.add_middleware(
+        BasicAuthMiddleware,
+        username=settings.auth_username,
+        password=settings.auth_password,
+        require_https=not settings.debug,
+        lockout=AuthLockout(
+            max_attempts=settings.auth_lockout_attempts,
+            window_seconds=settings.auth_lockout_window_seconds,
+        ),
+    )
+if settings.trusted_proxy_host_list:
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.trusted_proxy_host_list)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_list)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static"), check_dir=False), name="static")
+app.state.trusted_proxy_hosts = settings.trusted_proxy_host_list
+app.state.allowed_hosts = settings.allowed_host_list
 
 file_registry = FileRegistry(settings)
-file_registry.ensure_default_file(settings.default_excel_path)
-dashboard_payload_cache = DashboardPayloadCache()
+dashboard_payload_cache = DashboardPayloadCache(max_entries=settings.max_upload_files + 1)
+upload_rate_limiter = UploadRateLimiter(settings.upload_rate_limit_per_minute)
 
 
 @app.middleware("http")
@@ -53,7 +97,18 @@ async def request_logging_middleware(request: Request, call_next):
     request.state.request_id = request_id
     started = time.perf_counter()
     try:
+        enforce_upload_rate_limit(request, upload_rate_limiter)
         response = await call_next(request)
+    except RateLimitExceeded:
+        logger.warning(
+            "upload_rate_limited",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+            },
+        )
+        return JSONResponse(status_code=429, content={"detail": "Слишком много загрузок. Повторите позже."})
     except Exception:
         logger.exception(
             "request_failed",
@@ -134,10 +189,74 @@ def templated(request: Request, template_name: str, context: dict[str, Any], sta
         "request": request,
         "url_for": template_url_for(request),
         "file_context": files_payload(request),
+        "csrf_token": get_or_create_csrf_token(request),
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
         "current_nav_tab": "dashboard",
+        "debug_enabled": settings.debug,
         **context,
     }
     return templates.TemplateResponse(request, template_name, ctx, status_code=status_code)
+
+
+def validation_worker_env() -> dict[str, str]:
+    env: dict[str, str] = {}
+    for key in ("PATH", "SYSTEMROOT", "WINDIR", "PATHEXT", "TMP", "TEMP", "SYSTEMDRIVE"):
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+    env["PYTHONPATH"] = str(BASE_DIR)
+    return env
+
+
+def validate_excel_file_isolated(path: Path) -> ValidationResult:
+    command = [
+        sys.executable,
+        "-m",
+        "file_validation_worker",
+        str(path),
+        "--max-archive-entries",
+        str(settings.xlsx_max_archive_entries),
+        "--max-uncompressed-bytes",
+        str(settings.xlsx_max_uncompressed_bytes),
+        "--max-compression-ratio",
+        str(settings.xlsx_max_compression_ratio),
+        "--max-sheets",
+        str(settings.xlsx_max_sheets),
+        "--max-rows-per-sheet",
+        str(settings.xlsx_max_rows_per_sheet),
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=BASE_DIR,
+            env=validation_worker_env(),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=settings.xlsx_validation_timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError("Проверка XLSX превысила допустимое время") from exc
+
+    try:
+        payload = json.loads(completed.stdout.strip())
+    except (json.JSONDecodeError, TypeError) as exc:
+        logger.error(
+            "xlsx_validation_worker_failed",
+            extra={"return_code": completed.returncode, "stderr": completed.stderr[-1000:]},
+        )
+        raise ValueError("Не удалось безопасно проверить XLSX") from exc
+    if completed.returncode != 0 or not payload.get("ok"):
+        raise ValueError(str(payload.get("error") or "Файл не прошёл проверку"))
+    return ValidationResult(
+        service_count=int(payload["service_count"]),
+        class_count=int(payload["class_count"]),
+    )
+
+
+file_registry.ensure_default_file(settings.default_excel_path, validator=validate_excel_file_isolated)
 
 
 def load_dashboard_payload(path: Path) -> tuple[dict, dict, dict]:
@@ -170,17 +289,23 @@ def get_active_excel_path(request: Request) -> Path:
     record = get_active_file(request)
     if not record:
         return settings.default_excel_path
-    return file_registry.path_for(record)
+    try:
+        return file_registry.path_for(record)
+    except ValueError:
+        return settings.default_excel_path
 
 
 def load_active_dashboard_payload(request: Request) -> tuple[dict, dict, dict]:
     record = get_active_file(request)
     if not record:
-        raise HTTPException(status_code=404, detail=f"Файл не найден: {settings.default_excel_path}")
+        raise HTTPException(status_code=404, detail="Активный файл данных не найден")
 
-    path = file_registry.path_for(record)
+    try:
+        path = file_registry.path_for(record)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Активный файл данных не найден") from exc
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Файл не найден: {path}")
+        raise HTTPException(status_code=404, detail="Активный файл данных не найден")
 
     return dashboard_payload_cache.get(record.id, path, load_dashboard_payload)
 
@@ -228,19 +353,43 @@ def store_valid_excel_upload(
     final_path = settings.resolved_uploads_dir / stored_name
 
     try:
+        total_bytes = 0
         with temp_path.open("wb") as output:
             while chunk := file.file.read(1024 * 1024):
+                total_bytes += len(chunk)
+                if total_bytes > settings.max_upload_bytes:
+                    raise ValueError(
+                        f"Файл превышает лимит {settings.max_upload_bytes // (1024 * 1024)} МБ"
+                    )
                 output.write(chunk)
         if temp_path.stat().st_size == 0:
             raise ValueError("Файл пустой")
 
-        validation = validate_excel_file(temp_path)
+        validation = validate_excel_file_isolated(temp_path)
+        active = get_active_file(request)
+        victims = file_registry.plan_upload_capacity(
+            incoming_size=temp_path.stat().st_size,
+            max_files=settings.max_upload_files,
+            max_bytes=settings.max_upload_storage_bytes,
+            protected_ids={active.id} if active else set(),
+        )
         temp_path.replace(final_path)
         record = file_registry.add_valid_upload(
             original_name=original_name,
             stored_name=stored_name,
             path=final_path,
         )
+        deleted_ids = file_registry.delete_uploads(victims)
+        for deleted_id in deleted_ids:
+            dashboard_payload_cache.invalidate(deleted_id)
+        if deleted_ids:
+            logger.info(
+                "old_uploads_pruned",
+                extra={
+                    "request_id": getattr(request.state, "request_id", None),
+                    "deleted_file_ids": deleted_ids,
+                },
+            )
         request.session[SESSION_ACTIVE_FILE_KEY] = record.id
         dashboard_payload_cache.invalidate(record.id)
         logger.info(
@@ -248,7 +397,6 @@ def store_valid_excel_upload(
             extra={
                 "request_id": getattr(request.state, "request_id", None),
                 "file_id": record.id,
-                "original_name": original_name,
                 "stored_name": stored_name,
                 "service_count": validation.service_count,
                 "class_count": validation.class_count,
@@ -257,11 +405,19 @@ def store_valid_excel_upload(
         return record, validation
     except ValueError as exc:
         temp_path.unlink(missing_ok=True)
+        if "превышает лимит" in str(exc):
+            logger.warning(
+                rejected_event,
+                extra={
+                    "request_id": getattr(request.state, "request_id", None),
+                    "error": str(exc),
+                },
+            )
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
         logger.warning(
             rejected_event,
             extra={
                 "request_id": getattr(request.state, "request_id", None),
-                "original_name": original_name,
                 "error": str(exc),
             },
         )
@@ -283,6 +439,13 @@ def get_service_or_404(navigation: dict, class_name: str, service_name: str) -> 
 
 
 def render_dashboard_error(request: Request, error: str, status_code: int = 500) -> HTMLResponse:
+    request_id = getattr(request.state, "request_id", None)
+    if status_code >= 500:
+        logger.error(
+            "dashboard_render_failed",
+            extra={"request_id": request_id, "error": error},
+        )
+        error = f"Внутренняя ошибка. Код запроса: {request_id or 'не указан'}"
     url_fn = template_url_for(request)
     return templated(
         request,
@@ -303,7 +466,7 @@ def render_dashboard_error(request: Request, error: str, status_code: int = 500)
 
 @app.exception_handler(HTTPException)
 async def dashboard_http_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code != 404:
+    if exc.status_code != 404 or request.url.path.startswith("/api/"):
         return await http_exception_handler(request, exc)
     detail = exc.detail
     message = detail if isinstance(detail, str) else str(detail)
@@ -315,6 +478,11 @@ def api_files(request: Request) -> dict:
     return files_payload(request)
 
 
+@app.get("/api/csrf-token")
+def api_csrf_token(request: Request) -> dict[str, str]:
+    return {"csrf_token": get_or_create_csrf_token(request)}
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -322,29 +490,29 @@ def health() -> dict:
 
 @app.get("/ready")
 def ready() -> JSONResponse:
-    checks: dict[str, bool | str | None] = {
+    checks: dict[str, bool] = {
         "database": False,
         "uploads_dir": False,
         "latest_file": False,
-        "latest_file_id": None,
     }
 
     try:
         with file_registry.connect() as conn:
             conn.execute("SELECT 1").fetchone()
         checks["database"] = True
-    except Exception as exc:
-        checks["database_error"] = str(exc)
+    except Exception:
+        logger.exception("readiness_database_check_failed")
 
     uploads_dir = settings.resolved_uploads_dir
     checks["uploads_dir"] = uploads_dir.exists() and uploads_dir.is_dir()
 
     latest = file_registry.get_latest_valid()
     if latest:
-        latest_path = file_registry.path_for(latest)
-        checks["latest_file"] = latest_path.exists()
-        checks["latest_file_id"] = latest.id
-        checks["latest_file_path"] = str(latest_path)
+        try:
+            latest_path = file_registry.path_for(latest)
+            checks["latest_file"] = latest_path.exists()
+        except ValueError:
+            checks["latest_file"] = False
 
     is_ready = bool(checks["database"] and checks["uploads_dir"] and checks["latest_file"])
     return JSONResponse(
@@ -355,6 +523,7 @@ def ready() -> JSONResponse:
 
 @app.post("/api/session/active-file/{file_id}")
 def api_set_active_file(request: Request, file_id: int) -> dict:
+    enforce_csrf(request, allowed_hosts=settings.allowed_host_list)
     record = set_active_file(request, file_id)
     return {
         "active_file_id": record.id,
@@ -368,9 +537,12 @@ def api_excel_active(request: Request) -> FileResponse:
     record = get_active_file(request)
     if not record:
         raise HTTPException(status_code=404, detail="Активный Excel-файл не найден")
-    path = file_registry.path_for(record)
+    try:
+        path = file_registry.path_for(record)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Активный Excel-файл не найден") from exc
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Файл не найден: {path}")
+        raise HTTPException(status_code=404, detail="Активный Excel-файл не найден")
     return FileResponse(
         path,
         filename=record.original_name,
@@ -380,6 +552,7 @@ def api_excel_active(request: Request) -> FileResponse:
 
 @app.post("/api/excel/save-version")
 def api_excel_save_version(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    enforce_csrf(request, allowed_hosts=settings.allowed_host_list)
     original_name = Path(file.filename or "excel-editor-version.xlsx").name
     try:
         record, validation = store_valid_excel_upload(
@@ -403,6 +576,7 @@ def api_excel_save_version(request: Request, file: UploadFile = File(...)) -> JS
 
 @app.post("/api/files/upload")
 def api_upload_file(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    enforce_csrf(request, allowed_hosts=settings.allowed_host_list)
     original_name = Path(file.filename or "").name
     try:
         record, validation = store_valid_excel_upload(
@@ -529,9 +703,12 @@ def dashboard_excel_editor(request: Request):
     record = get_active_file(request)
     if not record:
         return render_dashboard_error(request, "Активный Excel-файл не найден", status_code=404)
-    path = file_registry.path_for(record)
+    try:
+        path = file_registry.path_for(record)
+    except ValueError:
+        return render_dashboard_error(request, "Активный Excel-файл не найден", status_code=404)
     if not path.exists():
-        return render_dashboard_error(request, f"Файл не найден: {path}", status_code=404)
+        return render_dashboard_error(request, "Активный Excel-файл не найден", status_code=404)
 
     return templated(
         request,
