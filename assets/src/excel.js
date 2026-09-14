@@ -260,6 +260,9 @@ async function saveAsNewVersion(univerAPI) {
 
   const response = await fetch("/api/excel/save-version", {
     method: "POST",
+    headers: {
+      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "",
+    },
     body: formData,
   });
   const payload = await response.json().catch(() => ({}));

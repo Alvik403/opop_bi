@@ -1,0 +1,73 @@
+limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=uploads:10m rate=5r/m;
+limit_conn_zone $binary_remote_addr zone=connections:10m;
+
+upstream opop_backend {
+    server web:8000;
+    keepalive 16;
+}
+
+server {
+    listen 8080;
+    server_name ${SERVER_NAME};
+
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 8443 ssl;
+    server_name ${SERVER_NAME};
+
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:TLS:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    client_max_body_size 52m;
+    client_body_timeout 30s;
+    keepalive_timeout 30s;
+    limit_conn connections 20;
+    limit_req zone=general burst=30 nodelay;
+
+    location = /health {
+        allow 127.0.0.1;
+        allow ${MONITORING_CIDR};
+        deny all;
+        proxy_pass http://opop_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location = /ready {
+        allow 127.0.0.1;
+        allow ${MONITORING_CIDR};
+        deny all;
+        proxy_pass http://opop_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location ~ ^/api/(files/upload|excel/save-version)$ {
+        limit_req zone=uploads burst=2 nodelay;
+        proxy_request_buffering on;
+        proxy_read_timeout 45s;
+        proxy_send_timeout 45s;
+        proxy_pass http://opop_backend;
+        include /etc/nginx/proxy_params;
+    }
+
+    location / {
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_pass http://opop_backend;
+        include /etc/nginx/proxy_params;
+    }
+}

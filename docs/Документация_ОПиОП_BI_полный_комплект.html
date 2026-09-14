@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Документация ОПиОП BI — полный комплект</title>
+  <style>
+:root {
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --text: #1a2332;
+  --muted: #5b6b7c;
+  --accent: #0b6e4f;
+  --border: #d8e0ea;
+  --code-bg: #0f172a;
+  --code-fg: #e2e8f0;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #eef3f8 0%, var(--bg) 240px);
+  line-height: 1.55;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+header.hero {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px rgba(26, 35, 50, 0.06);
+}
+header.hero h1 { margin: 0 0 8px; font-size: 1.85rem; color: var(--accent); }
+header.hero p { margin: 4px 0; color: var(--muted); }
+nav.toc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+}
+nav.toc h2 { margin: 0 0 10px; font-size: 1.05rem; }
+nav.toc ol { margin: 0; padding-left: 1.3rem; }
+nav.toc a { color: var(--accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+section.doc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px 32px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 14px rgba(26, 35, 50, 0.04);
+}
+section.doc h1 { font-size: 1.55rem; border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+section.doc h2 { font-size: 1.25rem; margin-top: 1.6em; color: #123; }
+section.doc h3 { font-size: 1.08rem; margin-top: 1.3em; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 18px;
+  font-size: 0.95rem;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #eef6f2; }
+tr:nth-child(even) td { background: #fafcfe; }
+code {
+  font-family: Consolas, "Courier New", monospace;
+  background: #eef2f7;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 0.86rem;
+}
+pre code { background: transparent; color: inherit; padding: 0; }
+hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+blockquote {
+  margin: 12px 0;
+  padding: 8px 14px;
+  border-left: 4px solid var(--accent);
+  background: #f0faf5;
+  color: var(--muted);
+}
+footer {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+@media print {
+  body { background: #fff; }
+  .wrap { max-width: none; padding: 0; }
+  section.doc, header.hero, nav.toc {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Документация «Дашборд ОПиОП BI»</h1>
+    </header>
+    <nav class="toc">
+      <h2>Содержание</h2>
+      <ol>
+        <li><a href="#sec-1">Документация проекта «Дашборд ОПиОП BI»</a></li><li><a href="#sec-2">01. Описание проекта</a></li><li><a href="#sec-3">02. Архитектура приложения</a></li><li><a href="#sec-4">03. Архитектура базы данных и хранилища</a></li><li><a href="#sec-5">04. API и маршруты</a></li><li><a href="#sec-6">05. Модель данных Excel (калькуляция)</a></li><li><a href="#sec-7">06. Развёртывание и эксплуатация</a></li><li><a href="#sec-8">Документация для проверки информационной безопасности</a></li><li><a href="#sec-9">Чек-лист проверки информационной безопасности</a></li>
+      </ol>
+    </nav>
+    <section class="doc" id="sec-1"><h1>Документация проекта «Дашборд ОПиОП BI»</h1>
+<h2>Краткие технические характеристики</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Тип системы</td>
+<td>Внутренний BI-дашборд (web)</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>FastAPI, Python 3.12, uvicorn</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>Jinja2 + Vite + Tailwind + Chart.js + Univer</td>
+</tr>
+<tr>
+<td>БД</td>
+<td>SQLite (метаданные файлов)</td>
+</tr>
+<tr>
+<td>Данные</td>
+<td>Excel <code>.xlsx</code> (лист калькуляции), без ПДн</td>
+</tr>
+<tr>
+<td>Аутентификация</td>
+<td>HTTP Basic Auth (временно до SSO) + CSRF</td>
+</tr>
+<tr>
+<td>Публикация</td>
+<td>HTTPS <code>:443</code> через <code>opop_bi_nginx</code>; порт <code>8000</code> не на хосте</td>
+</tr>
+<tr>
+<td>Контейнеры</td>
+<td><code>opop_bi_nginx</code> (UID 101), <code>opop_bi_web</code> (UID 10001)</td>
+</tr>
+<tr>
+<td>ОС / Docker (реком.)</td>
+<td>Ubuntu 22.04/24.04 LTS, Docker Engine 29.x + Compose v2</td>
+</tr>
+</tbody>
+</table></section><section class="doc" id="sec-2"><h1>01. Описание проекта</h1>
+<h2>1.1. Назначение</h2>
+<p><strong>Дашборд ОПиОП BI</strong> — веб-приложение для визуального анализа калькуляции услуг по данным Excel.</p>
+<p>Система:</p>
+<ul>
+<li>загружает и проверяет Excel-файл с листом калькуляции;</li>
+<li>строит витрины: классы → услуги → виды затрат (прямые / косвенные / неэффективность);</li>
+<li>хранит историю загруженных версий файла;</li>
+<li>позволяет редактировать активную книгу в браузере (Univer) и сохранять новую версию;</li>
+<li>предоставляет health/readiness для мониторинга.</li>
+</ul>
+<h2>1.2. Границы системы</h2>
+<h3>Входит в scope</h3>
+<ul>
+<li>Веб-UI дашборда и drill-down навигация.</li>
+<li>API загрузки / выбора / скачивания Excel.</li>
+<li>SQLite-реестр метаданных файлов.</li>
+<li>Локальная сборка frontend (без внешних CDN в runtime).</li>
+<li>Docker Compose: nginx (TLS) + FastAPI (internal).</li>
+</ul>
+<h3>Не входит в scope</h3>
+<ul>
+<li>Корпоративный SSO / LDAP / AD (есть только Basic Auth — временно).</li>
+<li>Разграничение ролей (все авторизованные пользователи равны).</li>
+<li>Аналитическое хранилище (DWH) — данные не нормализуются в витрину БД.</li>
+<li>Высокая доступность и горизонтальное масштабирование (один инстанс, SQLite).</li>
+<li>Обработка персональных данных (ПДн) — <strong>запрещена</strong> в базовом сценарии.</li>
+</ul>
+<h2>1.3. Пользователи</h2>
+<table>
+<thead>
+<tr>
+<th>Роль</th>
+<th>Действия</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Аналитик / сотрудник ОПиОП</td>
+<td>Просмотр дашборда, выбор файла, загрузка Excel, редактирование в браузере</td>
+</tr>
+<tr>
+<td>Администратор</td>
+<td>Развёртывание, <code>.env</code>, TLS-сертификаты, бэкапы, Docker</td>
+</tr>
+<tr>
+<td>Мониторинг</td>
+<td>Опрос <code>/health</code>, <code>/ready</code> через nginx из <code>MONITORING_CIDR</code> (без auth)</td>
+</tr>
+</tbody>
+</table>
+<h2>1.4. Технологический стек</h2>
+<table>
+<thead>
+<tr>
+<th>Слой</th>
+<th>Технологии</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td>Python 3.12, FastAPI, uvicorn, pandas, openpyxl, Jinja2, pydantic-settings</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>Vite, Tailwind, Chart.js, ExcelJS, Univer</td>
+</tr>
+<tr>
+<td>Proxy</td>
+<td>nginx unprivileged (TLS 1.2/1.3, HSTS, rate limits)</td>
+</tr>
+<tr>
+<td>Хранение</td>
+<td>SQLite + файловая система (<code>data/</code>, <code>uploads/</code>, <code>runtime/</code>, <code>logs/</code>)</td>
+</tr>
+<tr>
+<td>Контейнеризация</td>
+<td>Docker multi-stage (node:24-slim → python:3.12-slim), UID 10001</td>
+</tr>
+<tr>
+<td>Тесты</td>
+<td>pytest, httpx, <code>scripts/security_check.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2>1.5. Ключевые свойства v1.2</h2>
+<ul>
+<li>Production: <code>DEBUG=false</code>, Basic Auth только через HTTPS, CSRF на POST.</li>
+<li>Публикация только через nginx <code>:80/:443</code>; backend <code>:8000</code> во внутренней Docker-сети.</li>
+<li>OpenAPI/Swagger и <code>/debug</code> отключены в production.</li>
+<li>Усиленная XLSX-валидация (ZIP/структура, лимиты, изолированный worker).</li>
+<li>Security headers (CSP, HSTS, X-Frame-Options и др.), non-root контейнеры.</li>
+<li>Frontend без runtime-CDN.</li>
+<li>Backup/restore: <code>scripts/ops/backup_restore.py</code>.</li>
+</ul></section><section class="doc" id="sec-3"><h1>02. Архитектура приложения</h1>
+<h2>2.1. Общая схема (production)</h2>
+<pre><code>┌──────────────┐     HTTPS :443 / Basic Auth   ┌─────────────────────────────┐
+│  Браузер     │ ────────────────────────────► │  Docker: opop_bi_nginx      │
+│  (UI)        │ ◄──────────────────────────── │  TLS, HSTS, rate limits     │
+└──────────────┘                                └──────────────┬──────────────┘
+                                                               │ HTTP web:8000
+                                                               │ (сеть backend, internal)
+                                                    ┌──────────▼──────────┐
+                                                    │  Docker: opop_bi_web│
+                                                    │  uvicorn + FastAPI  │
+                                                    │  UID 10001          │
+                                                    └──────────┬──────────┘
+                       ┌───────────────┬───────────────┬───────┴────────┐
+                       ▼               ▼               ▼                ▼
+                 templates/      static/dist/    runtime/*.sqlite3   data/, uploads/
+                 (Jinja2)        (Vite build)   (метаданные)        (Excel-файлы)
+</code></pre>
+<p>Порт <code>8000</code> <strong>не публикуется</strong> на хост. HTTP <code>:80</code> на nginx перенаправляет на HTTPS.</p>
+<h2>2.2. Компоненты backend</h2>
+<table>
+<thead>
+<tr>
+<th>Модуль</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app.py</code></td>
+<td>Точка входа FastAPI: middleware, маршруты, рендер, upload</td>
+</tr>
+<tr>
+<td><code>settings.py</code></td>
+<td>Конфигурация из env/<code>.env</code>, валидация секретов в production</td>
+</tr>
+<tr>
+<td><code>security.py</code></td>
+<td>Basic Auth (HTTPS-only), CSRF, CSP/headers, rate limiter</td>
+</tr>
+<tr>
+<td><code>file_registry.py</code></td>
+<td>Реестр файлов в SQLite, квоты хранилища</td>
+</tr>
+<tr>
+<td><code>data_loader.py</code></td>
+<td>Парсинг Excel → услуги / классы / статьи затрат</td>
+</tr>
+<tr>
+<td><code>dashboard_builder.py</code></td>
+<td>KPI, навигация, drill-down по видам затрат</td>
+</tr>
+<tr>
+<td><code>dashboard_cache.py</code></td>
+<td>In-memory кеш payload по <code>(file_id, mtime, size)</code></td>
+</tr>
+<tr>
+<td><code>file_validation.py</code></td>
+<td>Структурная валидация XLSX / ZIP</td>
+</tr>
+<tr>
+<td><code>file_validation_worker.py</code></td>
+<td>Изолированная проверка с таймаутом</td>
+</tr>
+<tr>
+<td><code>logging_config.py</code></td>
+<td>JSON-логи, ротация, маскирование секретов</td>
+</tr>
+</tbody>
+</table>
+<h2>2.3. Компоненты frontend</h2>
+<table>
+<thead>
+<tr>
+<th>Артефакт</th>
+<th>Источник</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/static/dist/app.css</code></td>
+<td>Vite + Tailwind</td>
+<td>Стили UI</td>
+</tr>
+<tr>
+<td><code>/static/dist/app.js</code></td>
+<td><code>assets/src/app.js</code></td>
+<td>Меню файлов, upload, CSRF</td>
+</tr>
+<tr>
+<td><code>/static/dist/charts.js</code></td>
+<td><code>assets/src/charts.js</code></td>
+<td>Chart.js (локально)</td>
+</tr>
+<tr>
+<td><code>/static/dist/excel.js</code> + <code>excel.css</code></td>
+<td><code>assets/src/excel.js</code></td>
+<td>Редактор Univer + ExcelJS</td>
+</tr>
+</tbody>
+</table>
+<p>Шаблоны Jinja2 наследуют <code>templates/dashboard_shell.html</code> (CSP nonce, CSRF meta).</p>
+<h2>2.4. Поток обработки запроса (просмотр дашборда)</h2>
+<pre><code>1. nginx (TLS) → Basic Auth (если включён)
+2. CSRF token в сессии (для последующих POST)
+3. SessionMiddleware → active_file_id (или latest valid)
+4. FileRegistry.path_for(record)
+5. DashboardPayloadCache.get(file_id, path, loader)
+6. Jinja2 TemplateResponse + security headers
+</code></pre>
+<h2>2.5. Поток загрузки Excel</h2>
+<pre><code>POST /api/files/upload (или /api/excel/save-version)
+  → CSRF + Origin/Referer
+  → rate limit (app + nginx)
+  → запись в uploads/.incoming/{uuid}.xlsx
+  → MAX_UPLOAD_BYTES / квоты
+  → validate_excel_file() (worker + timeout)
+  → move в uploads/{uuid}.xlsx
+  → INSERT в SQLite (is_latest=1)
+  → session.active_file_id = новый id
+  → invalidate cache
+</code></pre>
+<h2>2.6. Активный файл и сессии</h2>
+<ul>
+<li>Выбор файла хранится в <strong>signed cookie-сессии</strong> (<code>active_file_id</code>).</li>
+<li>В production: <code>Secure</code> / <code>https_only</code>, <code>SameSite=lax</code>.</li>
+<li>Выбор действует <strong>только для текущего браузера/сессии</strong>.</li>
+<li>Глобальный «последний» файл (<code>is_latest</code>) обновляется при успешной загрузке.</li>
+</ul>
+<h2>2.7. Диаграмма модулей</h2>
+<pre><code>                    ┌─────────────┐
+                    │  settings   │
+                    └──────┬──────┘
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+     ┌──────────┐   ┌────────────┐  ┌─────────────┐
+     │ security │   │ file_reg.  │  │ logging_cfg │
+     └────┬─────┘   └─────┬──────┘  └─────────────┘
+          │               │
+          └───────┬───────┘
+                  ▼
+            ┌──────────┐
+            │  app.py  │
+            └────┬─────┘
+     ┌───────────┼───────────┬────────────────┐
+     ▼           ▼           ▼                ▼
+file_valid.  data_loader  dash_builder   dash_cache
+                 │              │
+                 └──────┬───────┘
+                        ▼
+                   templates /
+                   static/dist
+</code></pre></section><section class="doc" id="sec-4"><h1>03. Архитектура базы данных и хранилища</h1>
+<h2>3.1. Общий принцип</h2>
+<p>Система <strong>не хранит аналитические факты в реляционной БД</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Где</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Метаданные Excel-файлов</td>
+<td>SQLite (<code>runtime/dashboard.sqlite3</code>)</td>
+</tr>
+<tr>
+<td>Содержимое Excel</td>
+<td>Файловая система (<code>data/</code>, <code>uploads/</code>)</td>
+</tr>
+<tr>
+<td>Кеш дашборда</td>
+<td>Память процесса (не персистентно)</td>
+</tr>
+<tr>
+<td>Логи</td>
+<td><code>logs/app.log</code>, <code>logs/errors.log</code></td>
+</tr>
+</tbody>
+</table>
+<p>Это упрощает развёртывание (один контейнер), но ограничивает масштабирование и требует бэкапа файлов + SQLite вместе.</p>
+<h2>3.2. СУБД</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Движок</td>
+<td>SQLite 3 (stdlib <code>sqlite3</code>)</td>
+</tr>
+<tr>
+<td>Путь (default)</td>
+<td><code>runtime/dashboard.sqlite3</code></td>
+</tr>
+<tr>
+<td>Путь (Docker)</td>
+<td><code>/app/runtime/dashboard.sqlite3</code></td>
+</tr>
+<tr>
+<td>Env</td>
+<td><code>DATABASE_PATH</code> / <code>OPOP_DATABASE_PATH</code></td>
+</tr>
+<tr>
+<td>Доступ</td>
+<td>Один writer (один инстанс приложения)</td>
+</tr>
+</tbody>
+</table>
+<h2>3.3. Схема таблицы <code>files</code></h2>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS files (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    original_name    TEXT NOT NULL,   -- имя, которое видит пользователь
+    stored_name      TEXT NOT NULL,   -- имя файла на диске
+    sha256           TEXT NOT NULL,   -- хеш содержимого
+    size             INTEGER NOT NULL,
+    mtime            REAL NOT NULL,   -- mtime файла на диске
+    uploaded_at      TEXT NOT NULL,   -- ISO UTC
+    status           TEXT NOT NULL,   -- 'valid' и др.
+    validation_error TEXT,            -- nullable
+    is_latest        INTEGER NOT NULL DEFAULT 0,  -- 0/1
+    source           TEXT NOT NULL DEFAULT 'upload' -- 'default' | 'upload'
+);
+
+CREATE INDEX IF NOT EXISTS idx_files_status ON files(status);
+CREATE INDEX IF NOT EXISTS idx_files_latest ON files(is_latest);
+</code></pre>
+<h3>Смысл полей</h3>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>original_name</code></td>
+<td>Исходное имя <code>.xlsx</code> от пользователя</td>
+</tr>
+<tr>
+<td><code>stored_name</code></td>
+<td>Для upload: <code>{uuid}.xlsx</code>; для default — имя из <code>ACTIVE_DEFAULT_FILE</code></td>
+</tr>
+<tr>
+<td><code>sha256</code></td>
+<td>Контрольная сумма содержимого</td>
+</tr>
+<tr>
+<td><code>is_latest</code></td>
+<td>Флаг «последняя принятая валидная версия» (один актуальный latest)</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td><code>default</code> — стартовый файл из <code>data/</code>; <code>upload</code> — загружен пользователем / из редактора</td>
+</tr>
+</tbody>
+</table>
+<h2>3.4. Файловое хранилище</h2>
+<pre><code>opop_bi/
+├── data/
+│   └── data.xlsx              # файл по умолчанию (ACTIVE_DEFAULT_FILE)
+├── uploads/
+│   ├── .incoming/             # временные файлы во время upload
+│   └── {uuid}.xlsx            # принятые версии
+├── runtime/
+│   └── dashboard.sqlite3      # метаданные
+└── logs/
+    ├── app.log
+    └── errors.log
+</code></pre>
+<h3>Docker volumes (compose)</h3>
+<table>
+<thead>
+<tr>
+<th>Хост</th>
+<th>Контейнер</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>./data</code></td>
+<td><code>/app/data</code></td>
+</tr>
+<tr>
+<td><code>./uploads</code></td>
+<td><code>/app/uploads</code></td>
+</tr>
+<tr>
+<td><code>./runtime</code></td>
+<td><code>/app/runtime</code></td>
+</tr>
+<tr>
+<td><code>./logs</code></td>
+<td><code>/app/logs</code></td>
+</tr>
+</tbody>
+</table>
+<h2>3.5. Жизненный цикл записи</h2>
+<ol>
+<li>При старте: <code>ensure_default_file()</code> регистрирует <code>data/data.xlsx</code>, если есть.</li>
+<li>Upload: временный файл → валидация → финальный путь → <code>INSERT</code> + сброс старого <code>is_latest</code>.</li>
+<li>Выбор файла пользователем: меняется только cookie-сессия, не <code>is_latest</code>.</li>
+<li>Удаление старых файлов из UI <strong>не реализовано</strong> (рост <code>uploads/</code> нужно контролировать административно).</li>
+</ol>
+<h2>3.6. Диаграмма сущностей (логическая)</h2>
+<pre><code>┌─────────────────────────────┐
+│ files (SQLite)              │
+│  id PK                      │
+│  original_name              │
+│  stored_name ───────────────┼──► uploads/{stored_name}
+│  sha256, size, mtime        │    или data/{stored_name}
+│  status, is_latest, source  │
+└─────────────────────────────┘
+
+Session cookie
+  active_file_id ──────────────► files.id (только для браузера)
+</code></pre>
+<p>Аналитическая модель (классы, услуги, суммы) <strong>не материализуется в БД</strong> — строится на лету из Excel.</p>
+<h2>3.7. Рекомендации по сопровождению БД</h2>
+<ul>
+<li>Бэкапить <code>runtime/</code> и <code>uploads/</code> + <code>data/</code> атомарно (один архив).</li>
+<li>Не запускать несколько реплик приложения на одну SQLite без внешней блокировки.</li>
+<li>Периодически чистить старые <code>uploads/*.xlsx</code>, если диск ограничен.</li>
+<li>Не коммитить <code>*.sqlite3</code>, <code>data/</code>, <code>uploads/</code> в git (уже в <code>.gitignore</code>).</li>
+</ul></section><section class="doc" id="sec-5"><h1>04. API и маршруты</h1>
+<h2>4.1. Общие правила доступа</h2>
+<table>
+<thead>
+<tr>
+<th>Условие</th>
+<th>Поведение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEBUG=false</code> + заданы <code>AUTH_*</code></td>
+<td>Basic Auth на всех маршрутах, кроме публичных; только через HTTPS</td>
+</tr>
+<tr>
+<td>Публичные (приложение)</td>
+<td><code>GET /health</code>, <code>GET /ready</code></td>
+</tr>
+<tr>
+<td>Публичные через nginx</td>
+<td><code>/health</code>, <code>/ready</code> доступны <strong>только</strong> из <code>MONITORING_CIDR</code></td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td>Все изменяющие POST требуют заголовок <code>X-CSRF-Token</code></td>
+</tr>
+<tr>
+<td><code>DEBUG=true</code></td>
+<td>Auth не обязателен; доступны <code>/debug</code> и OpenAPI (только dev)</td>
+</tr>
+<tr>
+<td>OpenAPI</td>
+<td><code>/api/docs</code>, <code>/api/redoc</code>, <code>/api/openapi.json</code> — <strong>только при DEBUG=true</strong></td>
+</tr>
+</tbody>
+</table>
+<h2>4.2. Публичные эндпоинты (мониторинг)</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Ответ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/health</code></td>
+<td><code>{"status":"ok"}</code> — liveness</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/ready</code></td>
+<td>200 / 503 — булевы флаги готовности (без путей и stacktrace)</td>
+</tr>
+</tbody>
+</table>
+<h2>4.3. JSON API (требуют auth в production)</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/files</code></td>
+<td>Список файлов, active/latest IDs, флаг новой версии</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/session/active-file/{file_id}</code></td>
+<td>Выбрать активный файл для сессии (+ CSRF)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/excel/active</code></td>
+<td>Скачать активный <code>.xlsx</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/files/upload</code></td>
+<td>Загрузить новый Excel (multipart <code>file</code>, + CSRF)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/excel/save-version</code></td>
+<td>Сохранить версию из редактора (+ CSRF)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ограничения upload:</strong></p>
+<ul>
+<li>только <code>.xlsx</code>;</li>
+<li><code>MAX_UPLOAD_BYTES</code> (по умолчанию 50 МБ) → HTTP 413;</li>
+<li>квоты <code>MAX_UPLOAD_FILES</code> / <code>MAX_UPLOAD_STORAGE_BYTES</code>;</li>
+<li>ZIP/XLSX validation, лимиты листов/строк, worker timeout;</li>
+<li><code>UPLOAD_RATE_LIMIT_PER_MINUTE</code> → HTTP 429;</li>
+<li>nginx: отдельный rate limit на upload-эндпоинты, <code>client_max_body_size 52m</code>.</li>
+</ul>
+<h2>4.4. HTML-страницы дашборда</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/</code></td>
+<td>Редирект 307 → <code>/dashboard</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard</code></td>
+<td>Главная витрина (KPI, графики, таблицы)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/excel</code></td>
+<td>Браузерный редактор Excel (Univer)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/class/{class_name}</code></td>
+<td>Страница класса</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/class/{class}/service/{service}</code></td>
+<td>Страница услуги</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/cost/{cost_key}</code></td>
+<td>Обзор вида затрат (<code>direct</code> / <code>indirect</code> / <code>ineff</code>)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/cost/{cost_key}/class/{class}</code></td>
+<td>Вид затрат × класс</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/dashboard/class/.../service/.../cost/{cost_key}</code></td>
+<td>Детализация статьи затрат</td>
+</tr>
+</tbody>
+</table>
+<p>В path-параметрах используется конвертер <code>:path</code> — имена классов/услуг могут содержать <code>/</code>.</p>
+<h2>4.5. Debug-маршруты (только DEBUG=true)</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/debug</code></td>
+<td>Меню debug</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/debug/excel</code></td>
+<td>Сырые листы Excel</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/debug/calculation-services</code></td>
+<td>Распарсенные услуги по классам</td>
+</tr>
+</tbody>
+</table>
+<p>При <code>DEBUG=false</code> → HTTP 404.</p>
+<h2>4.6. Статика</h2>
+<table>
+<thead>
+<tr>
+<th>Путь</th>
+<th>Содержимое</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/static/dist/*</code></td>
+<td>Собранные CSS/JS (Vite)</td>
+</tr>
+</tbody>
+</table>
+<h2>4.7. Пример проверки API</h2>
+<pre><code class="language-bash"># через nginx (production)
+curl -sk https://&lt;SERVER_NAME&gt;/health          # 403 вне MONITORING_CIDR
+curl -sk -u 'USER:PASS' https://&lt;SERVER_NAME&gt;/api/files
+
+# CSRF: сначала GET /dashboard → meta csrf-token, затем POST с X-CSRF-Token
+
+# upload
+curl -sk -u 'USER:PASS' -H &quot;X-CSRF-Token: &lt;token&gt;&quot; \
+  -F &quot;file=@./data.xlsx&quot; https://&lt;SERVER_NAME&gt;/api/files/upload
+</code></pre></section><section class="doc" id="sec-6"><h1>05. Модель данных Excel (калькуляция)</h1>
+<h2>5.1. Входной формат</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Требование</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Расширение</td>
+<td><code>.xlsx</code></td>
+</tr>
+<tr>
+<td>Лист</td>
+<td>Первый лист книги (в документации/ошибках — «Калькуляция»)</td>
+</tr>
+<tr>
+<td>Заголовки</td>
+<td>Многоуровневые: строки заголовков индексы 2–3 (pandas <code>header=[2,3]</code>)</td>
+</tr>
+<tr>
+<td>Минимум колонок</td>
+<td>≥ 25</td>
+</tr>
+</tbody>
+</table>
+<p>Валидация (<code>file_validation.py</code>) отклоняет файл, если:</p>
+<ul>
+<li>нет услуг;</li>
+<li>нет классов;</li>
+<li>отсутствуют группы детальных колонок прямых / косвенных / неэффективности.</li>
+</ul>
+<h2>5.2. Ключевые колонки (по индексу)</h2>
+<table>
+<thead>
+<tr>
+<th>Индекс</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>№ строки (фильтр числовых строк)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Класс услуги (<code>class_name</code>; пусто → «Без класса»)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Наименование услуги (<code>service_name</code>)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Итого прямых расходов</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Косвенные «с неэффективностью» (база для разложения)</td>
+</tr>
+<tr>
+<td>22–24</td>
+<td>Три колонки неэффективности (суммируются)</td>
+</tr>
+</tbody>
+</table>
+<p>Детальные статьи затрат определяются по совпадению верхнего уровня заголовка с группами «Прямые / Косвенные / Неэффективность».</p>
+<h2>5.3. Расчётные поля услуги</h2>
+<pre><code>direct_cost       = колонка[4]
+inefficiency_cost = sum(колонки[22..24])
+indirect_cost     = колонка[16] - inefficiency_cost   # «чистые» косвенные
+indirect_sum      = indirect_cost + inefficiency_cost
+total_cost        = direct_cost + indirect_sum
+</code></pre>
+<p>Также формируются словари детализации:</p>
+<ul>
+<li><code>direct_details</code></li>
+<li><code>indirect_details</code></li>
+<li><code>inefficiency_details</code></li>
+</ul>
+<h2>5.4. Виды затрат в UI</h2>
+<table>
+<thead>
+<tr>
+<th>Ключ URL</th>
+<th>Название</th>
+<th>Поле суммы</th>
+<th>Цвет (UI)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>direct</code></td>
+<td>Прямые расходы</td>
+<td><code>direct_cost</code></td>
+<td><code>#1f6f66</code></td>
+</tr>
+<tr>
+<td><code>indirect</code></td>
+<td>Косвенные расходы</td>
+<td><code>indirect_cost</code></td>
+<td><code>#3e7cb1</code></td>
+</tr>
+<tr>
+<td><code>ineff</code></td>
+<td>Неэффективность</td>
+<td><code>inefficiency_cost</code></td>
+<td><code>#d47d2f</code></td>
+</tr>
+</tbody>
+</table>
+<h2>5.5. Иерархия навигации</h2>
+<pre><code>Обзор (/dashboard)
+  ├─ Класс (/dashboard/class/{class})
+  │    └─ Услуга (/dashboard/class/{class}/service/{service})
+  │         └─ Статья затрат (.../cost/{cost_key})
+  └─ Вид затрат (/dashboard/cost/{cost_key})
+       └─ Класс в разрезе вида (.../cost/{cost_key}/class/{class})
+</code></pre></section><section class="doc" id="sec-7"><h1>06. Развёртывание и эксплуатация</h1>
+<h2>6.1. Требования к серверу</h2>
+<table>
+<thead>
+<tr>
+<th>Компонент</th>
+<th>Рекомендация</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Кол-во ВМ</td>
+<td>1</td>
+</tr>
+<tr>
+<td>ОС</td>
+<td>Ubuntu Server 22.04 LTS или 24.04 LTS</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>4 vCPU (минимум 2)</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>8 ГБ (минимум 4 ГБ)</td>
+</tr>
+<tr>
+<td>Диск</td>
+<td>80 ГБ SSD (ОС + Docker + data/uploads/logs + резерв)</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>Docker Engine <strong>29.x</strong> (актуальный stable, напр. 29.7.2) + Compose plugin v2</td>
+</tr>
+<tr>
+<td>Сеть</td>
+<td>Доступ из VPN/корп. сети; порты хоста <strong>80, 443</strong> (+ 22 для администрирования)</td>
+</tr>
+<tr>
+<td>Python на хосте</td>
+<td>Не обязателен (всё в контейнере)</td>
+</tr>
+</tbody>
+</table>
+<h2>6.2. Файлы развёртывания</h2>
+<table>
+<thead>
+<tr>
+<th>Файл</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Dockerfile</code></td>
+<td>Multi-stage: сборка frontend + runtime Python (UID 10001)</td>
+</tr>
+<tr>
+<td><code>docker-compose.yml</code></td>
+<td>Production: nginx <code>:80/:443</code> + web (internal <code>:8000</code>)</td>
+</tr>
+<tr>
+<td><code>docker-compose.dev.yml</code></td>
+<td>Разработка: <code>DEBUG=true</code>, bind <code>127.0.0.1:18000</code> (<strong>не на сервере</strong>)</td>
+</tr>
+<tr>
+<td><code>nginx/</code></td>
+<td>TLS-сертификаты, шаблон конфига, proxy_params</td>
+</tr>
+<tr>
+<td><code>.env.example</code></td>
+<td>Шаблон переменных окружения</td>
+</tr>
+<tr>
+<td><code>.env</code></td>
+<td>Секреты (не в git)</td>
+</tr>
+<tr>
+<td><code>scripts/ops/backup_restore.py</code></td>
+<td>Резервное копирование / восстановление</td>
+</tr>
+<tr>
+<td><code>scripts/security_check.py</code></td>
+<td>pytest + pip-audit + npm audit</td>
+</tr>
+</tbody>
+</table>
+<h2>6.3. Переменные окружения</h2>
+<table>
+<thead>
+<tr>
+<th>Переменная</th>
+<th>Описание</th>
+<th>Production</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEBUG</code></td>
+<td>Debug-страницы и OpenAPI</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>SESSION_SECRET</code></td>
+<td>Ключ cookie-сессий</td>
+<td>≥32 символа, случайный</td>
+</tr>
+<tr>
+<td><code>AUTH_USERNAME</code> / <code>AUTH_PASSWORD</code></td>
+<td>Basic Auth</td>
+<td>обязательны; пароль ≥16</td>
+</tr>
+<tr>
+<td><code>SERVER_NAME</code> / <code>ALLOWED_HOSTS</code></td>
+<td>Имя HTTPS-сервера / Host</td>
+<td>обязательны</td>
+</tr>
+<tr>
+<td><code>MONITORING_CIDR</code></td>
+<td>Сеть для <code>/health</code>, <code>/ready</code></td>
+<td>по умолчанию <code>10.0.0.0/8</code></td>
+</tr>
+<tr>
+<td><code>TRUSTED_PROXY_IPS</code></td>
+<td>Доверенные proxy</td>
+<td>в compose: <code>*</code></td>
+</tr>
+<tr>
+<td><code>MAX_UPLOAD_BYTES</code></td>
+<td>Лимит upload</td>
+<td>по умолчанию 50 МБ</td>
+</tr>
+<tr>
+<td><code>MAX_UPLOAD_FILES</code> / <code>MAX_UPLOAD_STORAGE_BYTES</code></td>
+<td>Квоты версий</td>
+<td>заданы в <code>.env.example</code></td>
+</tr>
+<tr>
+<td><code>XLSX_*</code></td>
+<td>Лимиты ZIP/XLSX и timeout валидации</td>
+<td>заданы в <code>.env.example</code></td>
+</tr>
+<tr>
+<td><code>DATA_DIR</code> / <code>UPLOADS_DIR</code> / <code>DATABASE_PATH</code> / <code>LOGS_DIR</code></td>
+<td>Пути</td>
+<td>в Docker — <code>/app/...</code></td>
+</tr>
+</tbody>
+</table>
+<p>Генерация секрета:</p>
+<pre><code class="language-bash">python3 -c &quot;import secrets; print(secrets.token_urlsafe(48))&quot;
+</code></pre>
+<h2>6.4. Быстрый старт (production)</h2>
+<pre><code class="language-bash">cd ~/opop_bi
+cp .env.example .env
+# заполнить SESSION_SECRET, AUTH_*, SERVER_NAME, ALLOWED_HOSTS, MONITORING_CIDR
+
+# TLS-сертификаты
+# nginx/certs/fullchain.pem + privkey.pem
+
+mkdir -p data uploads runtime logs
+# положить data/data.xlsx
+sudo chown -R 10001:10001 data uploads runtime logs
+
+docker compose up --build -d
+curl -skI https://127.0.0.1/   # 301/200 через nginx
+</code></pre>
+<p>URL: <code>https://&lt;SERVER_NAME&gt;/</code> (Basic Auth). Порт <code>8000</code> с хоста недоступен.</p>
+<h2>6.5. Порты и контейнеры</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Хост-порты</td>
+<td><code>80</code> → nginx:8080, <code>443</code> → nginx:8443</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td><code>web:8000</code> (только сеть <code>backend</code>, <code>internal: true</code>)</td>
+</tr>
+<tr>
+<td><code>container_name</code></td>
+<td><code>opop_bi_nginx</code>, <code>opop_bi_web</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Важно:</strong> на одном сервере с другим BI развести <code>container_name</code> и порты 80/443.</p>
+<h2>6.6. Автозапуск</h2>
+<p>В compose задано <code>restart: unless-stopped</code>.</p>
+<pre><code class="language-bash">sudo systemctl enable docker
+</code></pre>
+<h2>6.7. Бэкапы</h2>
+<pre><code class="language-bash">python scripts/ops/backup_restore.py backup
+# восстановление только после docker compose down:
+python scripts/ops/backup_restore.py restore backups/opop-bi-&lt;timestamp&gt;.zip --confirm
+docker compose up -d
+</code></pre>
+<p>Архивы: <code>backups/</code> (не в git). Хранить на зашифрованном носителе.</p>
+<h2>6.8. Обновление</h2>
+<pre><code class="language-bash">cd ~/opop_bi
+git pull
+docker compose up --build -d
+python scripts/security_check.py   # рекомендуется
+</code></pre>
+<h2>6.9. Логи</h2>
+<pre><code class="language-bash">docker compose logs -f nginx web
+tail -f logs/app.log logs/errors.log
+</code></pre>
+<p>Логи JSON; секреты маскируются. Docker json-file: 5 × 10 МБ.</p>
+<h2>6.10. Тесты и проверка ИБ</h2>
+<pre><code class="language-bash"># unit/security tests
+docker compose -f docker-compose.dev.yml build
+docker compose -f docker-compose.dev.yml run --rm web \
+  sh -c &quot;pip install -r requirements-dev.txt &amp;&amp; pytest -q&quot;
+
+# полный security check (pytest + pip-audit + npm)
+python scripts/security_check.py
+</code></pre></section><section class="doc" id="sec-8"><h1>Документация для проверки информационной безопасности</h1>
+<h2>1. Общие сведения</h2>
+<h3>1.1. Назначение системы</h3>
+<p>Внутреннее веб-приложение для анализа калькуляции услуг по Excel-файлам с листом «Калькуляция»: витрины по классам, услугам и видам затрат, загрузка версий файлов, выбор активного файла в сессии, браузерный просмотр и редактирование Excel.</p>
+<h3>1.2. Регulatory scope (область регулирования)</h3>
+<table>
+<thead>
+<tr>
+<th>НПА</th>
+<th>Применимость</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ФЗ №149 «Об информации…»</td>
+<td><strong>Да</strong></td>
+<td>Общие требования к защите информации в ИС</td>
+</tr>
+<tr>
+<td>ФЗ №152 «О персональных данных»</td>
+<td><strong>Нет</strong> (базовый сценарий)</td>
+<td>Система предназначена для калькуляции услуг/затрат <strong>без ПДн</strong></td>
+</tr>
+<tr>
+<td>ФЗ №187 «О безопасности КИИ»</td>
+<td><strong>Нет</strong></td>
+<td>Система не классифицирована как объект КИИ</td>
+</tr>
+<tr>
+<td>Указ №250</td>
+<td><strong>Нет</strong></td>
+<td>Не относится к перечню организаций, обязанных по Указу</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Важно:</strong> загрузка файлов с персональными или иными конфиденциальными данными <strong>запрещена</strong> без отдельного согласования СБ и пересмотра мер защиты (в т.ч. по 152-ФЗ).</p>
+<h3>1.3. Классификация обрабатываемой информации</h3>
+<ul>
+<li><strong>Тип данных:</strong> служебная/операционная информация (калькуляция затрат, структура услуг).</li>
+<li><strong>Конфиденциальность:</strong> внутреннее использование, доступ ограничен VPN/корпоративной сетью + аутентификация.</li>
+<li><strong>ПДн:</strong> не обрабатываются в штатном режиме эксплуатации.</li>
+</ul>
+<hr />
+<h2>2. Архитектура и сетевая модель</h2>
+<h3>2.1. Схема размещения (production)</h3>
+<pre><code>[Пользователь / VPN]
+        │ HTTPS :443
+        ▼
+┌─────────────────────────┐
+│ nginx (opop_bi_nginx)   │  ← единственная точка публикации портов 80/443
+│ TLS, HSTS, rate limits  │
+└───────────┬─────────────┘
+            │ HTTP web:8000 (Docker internal network)
+            ▼
+┌─────────────────────────┐
+│ FastAPI (opop_bi_web)   │  ← порт 8000 НЕ публикуется на хост
+│ non-root UID 10001      │
+└───────────┬─────────────┘
+            │ bind mounts
+            ▼
+   data/ uploads/ runtime/ logs/  (тома на хосте)
+</code></pre>
+<h3>2.2. Порты и протоколы</h3>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Источник</th>
+<th>Назначение</th>
+<th>Протокол</th>
+<th>Порт</th>
+<th>Примечание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>АРМ пользователя / VPN</td>
+<td>Reverse proxy</td>
+<td>TCP</td>
+<td>443</td>
+<td>HTTPS, Basic Auth</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Reverse proxy</td>
+<td>Контейнер <code>web</code></td>
+<td>TCP</td>
+<td>8000</td>
+<td>Только внутренняя Docker-сеть <code>backend</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>АРМ администратора</td>
+<td>Сервер приложения</td>
+<td>TCP</td>
+<td>22</td>
+<td>SSH, администрирование ОС/Docker</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Система мониторинга</td>
+<td>Reverse proxy</td>
+<td>TCP</td>
+<td>443</td>
+<td><code>/health</code>, <code>/ready</code> — только из <code>MONITORING_CIDR</code></td>
+</tr>
+</tbody>
+</table>
+<p>Порт <strong>8000/18000 не публикуется</strong> на интерфейсы хоста в production compose.</p>
+<h3>2.3. Доступ извне</h3>
+<ul>
+<li>Публичный доступ из Интернета: <strong>не предусмотрен</strong>.</li>
+<li>Доступ: сотрудники компании через VPN/корпоративную сеть.</li>
+<li>Исходящие подключения приложения во внешние сервисы: <strong>отсутствуют</strong> (статика и зависимости собраны локально, CDN не используются).</li>
+</ul>
+<hr />
+<h2>3. Аутентификация и управление доступом</h2>
+<h3>3.1. Текущая модель</h3>
+<table>
+<thead>
+<tr>
+<th>Элемент</th>
+<th>Реализация</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Аутентификация</td>
+<td>HTTP Basic Auth (<code>AUTH_USERNAME</code> / <code>AUTH_PASSWORD</code> в <code>.env</code>)</td>
+</tr>
+<tr>
+<td>Авторизация (RBAC)</td>
+<td><strong>Не реализована</strong> — один общий аккаунт для всех пользователей</td>
+</tr>
+<tr>
+<td>SSO / AD / LDAP</td>
+<td><strong>Не используются</strong> (запланирован переход)</td>
+</tr>
+<tr>
+<td>Сессии</td>
+<td>Signed cookie (<code>SESSION_SECRET</code>), <code>SameSite=lax</code>, <code>Secure</code>/<code>https_only</code> в production</td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td>Сессионный токен для всех POST (<code>X-CSRF-Token</code>)</td>
+</tr>
+<tr>
+<td>Публичные маршруты без auth</td>
+<td><code>/health</code>, <code>/ready</code> (на уровне приложения); на nginx — ограничены по IP для мониторинга</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2. Матрица доступа (упрощённая)</h3>
+<table>
+<thead>
+<tr>
+<th>Роль</th>
+<th>Дашборд (HTTPS)</th>
+<th>Загрузка / редактирование Excel</th>
+<th>Администрирование сервера</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Пользователь ОПиОП</td>
+<td>чтение</td>
+<td>запись</td>
+<td>нет</td>
+</tr>
+<tr>
+<td>Администратор ИТ</td>
+<td>чтение</td>
+<td>запись</td>
+<td>полный доступ (ОС, Docker, nginx, <code>.env</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3>3.3. Требования к учётным данным</h3>
+<ul>
+<li><code>SESSION_SECRET</code> — не менее 32 символов, криптостойкая случайная строка.</li>
+<li><code>AUTH_PASSWORD</code> — не менее 16 символов при <code>DEBUG=false</code>.</li>
+<li>Секреты хранятся только в <code>.env</code> на сервере; файл <strong>не</strong> включается в Git.</li>
+<li>Ротация секретов — по регламенту ИБ организации.</li>
+</ul>
+<hr />
+<h2>4. Реализованные меры защиты</h2>
+<h3>4.1. Транспортная безопасность</h3>
+<ul>
+<li>TLS 1.2/1.3 на nginx (порт 443).</li>
+<li>Принудительный редирект HTTP → HTTPS.</li>
+<li>HSTS: <code>max-age=31536000; includeSubDomains</code>.</li>
+<li>Basic Auth в production принимается <strong>только через HTTPS</strong> (блокировка на уровне приложения при <code>scheme != https</code>).</li>
+</ul>
+<h3>4.2. HTTP-заголовки безопасности</h3>
+<table>
+<thead>
+<tr>
+<th>Заголовок</th>
+<th>Где</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Strict-Transport-Security</code></td>
+<td>nginx</td>
+<td>HSTS</td>
+</tr>
+<tr>
+<td><code>Content-Security-Policy</code></td>
+<td>приложение</td>
+<td>Ограничение источников скриптов/стилей</td>
+</tr>
+<tr>
+<td><code>X-Frame-Options: DENY</code></td>
+<td>приложение</td>
+<td>Защита от clickjacking</td>
+</tr>
+<tr>
+<td><code>X-Content-Type-Options: nosniff</code></td>
+<td>приложение</td>
+<td>MIME-sniffing</td>
+</tr>
+<tr>
+<td><code>Referrer-Policy</code></td>
+<td>приложение</td>
+<td>Ограничение referrer</td>
+</tr>
+<tr>
+<td><code>Cross-Origin-Opener-Policy</code></td>
+<td>приложение</td>
+<td>Изоляция контекста</td>
+</tr>
+<tr>
+<td><code>Cache-Control: no-store</code></td>
+<td>приложение</td>
+<td>Для API и dashboard</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3. Защита загрузки файлов</h3>
+<table>
+<thead>
+<tr>
+<th>Контроль</th>
+<th>Параметр / реализация</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Расширение</td>
+<td>только <code>.xlsx</code></td>
+</tr>
+<tr>
+<td>Размер файла</td>
+<td><code>MAX_UPLOAD_BYTES</code> (по умолчанию 50 МБ)</td>
+</tr>
+<tr>
+<td>ZIP/XLSX-структура</td>
+<td>проверка сигнатуры, обязательных частей OOXML</td>
+</tr>
+<tr>
+<td>Zip bomb</td>
+<td>лимит записей архива, коэффициента сжатия, распакованного объёма</td>
+</tr>
+<tr>
+<td>Листы / строки</td>
+<td><code>XLSX_MAX_SHEETS</code>, <code>XLSX_MAX_ROWS_PER_SHEET</code></td>
+</tr>
+<tr>
+<td>Таймаут проверки</td>
+<td>изолированный worker-процесс, <code>XLSX_VALIDATION_TIMEOUT_SECONDS</code></td>
+</tr>
+<tr>
+<td>Rate limit (приложение)</td>
+<td><code>UPLOAD_RATE_LIMIT_PER_MINUTE</code> (по IP клиента)</td>
+</tr>
+<tr>
+<td>Rate limit (nginx)</td>
+<td>отдельная зона для upload-эндпоинтов</td>
+</tr>
+<tr>
+<td>Квота хранилища</td>
+<td><code>MAX_UPLOAD_FILES</code>, <code>MAX_UPLOAD_STORAGE_BYTES</code></td>
+</tr>
+<tr>
+<td>Имя на диске</td>
+<td>UUID (не пользовательское)</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4. Защита от утечек</h3>
+<ul>
+<li><code>/ready</code> возвращает только булевы флаги готовности, без путей и текстов исключений.</li>
+<li>Ошибки 500 в UI — обобщённые, с <code>request_id</code>; детали только в логах.</li>
+<li>Логи не содержат паролей и CSRF-токенов (маскирование в <code>logging_config.py</code>).</li>
+</ul>
+<h3>4.5. Контейнерная изоляция</h3>
+<table>
+<thead>
+<tr>
+<th>Сервис</th>
+<th>UID</th>
+<th>read_only</th>
+<th>cap_drop</th>
+<th>Примечание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>web</code></td>
+<td>10001</td>
+<td>да</td>
+<td>ALL</td>
+<td>tmpfs <code>/tmp</code></td>
+</tr>
+<tr>
+<td><code>nginx</code></td>
+<td>101</td>
+<td>да</td>
+<td>ALL</td>
+<td>tmpfs для cache/run/conf.d</td>
+</tr>
+<tr>
+<td><code>init-permissions</code></td>
+<td>root (одноразово)</td>
+<td>—</td>
+<td>ALL + CHOWN</td>
+<td>chown томов перед стартом</td>
+</tr>
+</tbody>
+</table>
+<p>Docker-сеть <code>backend</code> — <strong>internal: true</strong> (backend недоступен извне).</p>
+<h3>4.6. Host / proxy hardening</h3>
+<ul>
+<li><code>TrustedHostMiddleware</code> — проверка заголовка <code>Host</code> (<code>ALLOWED_HOSTS</code>).</li>
+<li><code>TRUSTED_PROXY_IPS</code> — доверие заголовкам прокси только от nginx.</li>
+<li>Client IP для rate limit — <strong>не</strong> берётся из подменяемого <code>X-Forwarded-For</code> напрямую.</li>
+</ul>
+<hr />
+<h2>5. Журналирование и мониторинг</h2>
+<h3>5.1. Логи приложения</h3>
+<ul>
+<li>Формат: JSON (stdout + <code>logs/app.log</code>, <code>logs/errors.log</code>).</li>
+<li>Ротация файлов: <code>LOG_MAX_BYTES</code>, <code>LOG_BACKUP_COUNT</code>.</li>
+<li>События: запросы, ошибки, неуспешная аутентификация, загрузки (без паролей).</li>
+</ul>
+<h3>5.2. Логи Docker</h3>
+<ul>
+<li>Драйвер <code>json-file</code>, ротация: 5 файлов × 10 МБ на сервис.</li>
+</ul>
+<h3>5.3. Health / readiness</h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Назначение</th>
+<th>Auth</th>
+<th>Доступ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/health</code></td>
+<td>Liveness</td>
+<td>нет</td>
+<td>nginx: только <code>MONITORING_CIDR</code></td>
+</tr>
+<tr>
+<td><code>/ready</code></td>
+<td>Readiness (БД, тома, файл)</td>
+<td>нет</td>
+<td>nginx: только <code>MONITORING_CIDR</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Резервное копирование и восстановление</h2>
+<h3>6.1. Объекты резервного копирования</h3>
+<table>
+<thead>
+<tr>
+<th>Путь</th>
+<th>Содержимое</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data/</code></td>
+<td>Исходный Excel по умолчанию</td>
+</tr>
+<tr>
+<td><code>uploads/</code></td>
+<td>Загруженные версии <code>.xlsx</code></td>
+</tr>
+<tr>
+<td><code>runtime/dashboard.sqlite3</code></td>
+<td>Метаданные файлов</td>
+</tr>
+<tr>
+<td><code>.env</code></td>
+<td>Секреты (отдельно, с шифрованием at rest)</td>
+</tr>
+</tbody>
+</table>
+<h3>6.2. Процедура</h3>
+<pre><code class="language-bash"># Создание резервной копии
+python scripts/ops/backup_restore.py backup
+
+# Восстановление (после docker compose down)
+python scripts/ops/backup_restore.py restore backups/opop-bi-&lt;timestamp&gt;.zip --confirm
+docker compose up -d
+</code></pre>
+<p>Рекомендуется: ежедневное резервное копирование, хранение на зашифрованном носителе, ежеквартальная проверка восстановления.</p>
+<hr />
+<h2>7. Зависимости и аудит</h2>
+<h3>7.1. Стек</h3>
+<ul>
+<li><strong>Backend:</strong> Python 3.12, FastAPI, uvicorn, pandas, openpyxl, SQLite.</li>
+<li><strong>Frontend:</strong> Vite, Tailwind, Chart.js, Univer.js, ExcelJS (сборка локальная).</li>
+<li><strong>Proxy:</strong> nginx unprivileged (Alpine).</li>
+</ul>
+<h3>7.2. Проверка уязвимостей</h3>
+<pre><code class="language-bash">python scripts/security_check.py
+</code></pre>
+<p>Включает: pytest (30 тестов), <code>pip-audit</code>, <code>npm audit</code>, сборку frontend.</p>
+<p>По состоянию на 19.08.2026: <strong>0 известных уязвимостей</strong> в Python и npm зависимостях.</p>
+<hr />
+<h2>8. Известные ограничения и технический долг</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Ограничение</th>
+<th>Риск</th>
+<th>План устранения</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Общий Basic Auth для всех пользователей</td>
+<td>Нет персонального аудита, общий пароль</td>
+<td>Переход на SSO/LDAP</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Нет RBAC</td>
+<td>Любой авторизованный пользователь может загружать/редактировать</td>
+<td>Роли после SSO</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SQLite без шифрования at rest</td>
+<td>При компрометации диска — доступ к метаданным</td>
+<td>Шифрование тома ОС; при необходимости — SQLCipher</td>
+</tr>
+<tr>
+<td>4</td>
+<td>HTTP между nginx и backend</td>
+<td>Допустимо в изолированной Docker-сети</td>
+<td>TLS между контейнерами — при требовании СБ</td>
+</tr>
+<tr>
+<td>5</td>
+<td>CSP: <code>unsafe-eval</code>, <code>unsafe-inline</code> для стилей</td>
+<td>Требуется для Univer/Chart.js</td>
+<td>Рефакторинг frontend</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dev-режим (<code>DEBUG=true</code>) без auth</td>
+<td>Риск при ошибочном деплое</td>
+<td>Запрет dev compose на серверах, CI-проверка</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>9. Контрольные проверки для СБ</h2>
+<p>Краткий smoke-check после развёртывания:</p>
+<ol>
+<li><code>http://&lt;host&gt;/</code> → редирект на <code>https://</code>.</li>
+<li><code>https://&lt;host&gt;/dashboard</code> без credentials → 401.</li>
+<li><code>https://&lt;host&gt;/dashboard</code> с Basic Auth → 200, заголовок CSP присутствует.</li>
+<li><code>https://&lt;host&gt;/ready</code> с рабочей станции пользователя → 403.</li>
+<li><code>https://&lt;host&gt;/ready</code> из сети мониторинга → 200 или 503.</li>
+<li>Порт 8000 с хоста/сети → недоступен.</li>
+<li>POST без CSRF-токена → 403.</li>
+<li>Загрузка файла &gt; 50 МБ → 413.</li>
+</ol>
+<hr />
+<h2>10. Контакты и ответственность</h2>
+<table>
+<thead>
+<tr>
+<th>Роль</th>
+<th>Зона ответственности</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Владелец продукта (ОПиОП)</td>
+<td>Контент Excel, учётные данные пользователей, запрет ПДн</td>
+</tr>
+<tr>
+<td>ИТ / DevOps</td>
+<td>ОС, Docker, nginx, TLS-сертификаты, <code>.env</code>, backup</td>
+</tr>
+<tr>
+<td>СБ</td>
+<td>Согласование архитектуры, периодический аудит, инциденты</td>
+</tr>
+</tbody>
+</table>
+<p><em>Поля «ФИО / контакты» заполняются инициатором перед подачей на согласование.</em></p></section><section class="doc" id="sec-9"><h1>Чек-лист проверки информационной безопасности</h1>
+<h2>A. Regulatory scope</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A.1</td>
+<td>Подтверждено отсутствие обработки ПДн в штатном режиме</td>
+<td>☑</td>
+<td>Калькуляция услуг/затрат без ПДн</td>
+</tr>
+<tr>
+<td>A.2</td>
+<td>Зафиксирован запрет загрузки ПДн в Excel</td>
+<td>☑</td>
+<td>Организационный + в документации</td>
+</tr>
+<tr>
+<td>A.3</td>
+<td>Система не является объектом КИИ</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>A.4</td>
+<td>Применим ФЗ №149 (защита информации)</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>A.5</td>
+<td>152-ФЗ / 187-ФЗ / Указ №250 не применяются (базовый сценарий)</td>
+<td>☑</td>
+<td>Пересмотр при изменении назначения</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>B. Сеть и доступ</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B.1</td>
+<td>Доступ только через HTTPS (443)</td>
+<td>☑</td>
+<td>nginx, редирект с HTTP</td>
+</tr>
+<tr>
+<td>B.2</td>
+<td>Backend-порт (8000) не опубликован на хост</td>
+<td>☑</td>
+<td>Docker internal network</td>
+</tr>
+<tr>
+<td>B.3</td>
+<td>Публичный доступ из Интернета отсутствует</td>
+<td>☑</td>
+<td>Только VPN/корп. сеть</td>
+</tr>
+<tr>
+<td>B.4</td>
+<td>TLS 1.2+ включён</td>
+<td>☑</td>
+<td>nginx</td>
+</tr>
+<tr>
+<td>B.5</td>
+<td>HSTS включён</td>
+<td>☑</td>
+<td>nginx</td>
+</tr>
+<tr>
+<td>B.6</td>
+<td>SSL-сертификат корпоративный / public (не self-signed в prod)</td>
+<td>☐</td>
+<td>Заменить тестовый сертификат</td>
+</tr>
+<tr>
+<td>B.7</td>
+<td><code>/health</code>, <code>/ready</code> ограничены по IP мониторинга</td>
+<td>☑</td>
+<td><code>MONITORING_CIDR</code> на nginx</td>
+</tr>
+<tr>
+<td>B.8</td>
+<td>Исходящие подключения приложения в Интернет отсутствуют</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>B.9</td>
+<td>Firewall хоста: открыты только 22, 80, 443</td>
+<td>☐</td>
+<td>Проверить на стороне ОС</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>C. Аутентификация и доступ</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C.1</td>
+<td>Аутентификация включена в production (<code>DEBUG=false</code>)</td>
+<td>☑</td>
+<td>Basic Auth</td>
+</tr>
+<tr>
+<td>C.2</td>
+<td>Basic Auth только через HTTPS</td>
+<td>☑</td>
+<td>Блокировка HTTP на уровне приложения</td>
+</tr>
+<tr>
+<td>C.3</td>
+<td><code>SESSION_SECRET</code> ≥ 32 символов</td>
+<td>☑</td>
+<td>Валидация в settings</td>
+</tr>
+<tr>
+<td>C.4</td>
+<td><code>AUTH_PASSWORD</code> ≥ 16 символов</td>
+<td>☑</td>
+<td>Валидация в settings</td>
+</tr>
+<tr>
+<td>C.5</td>
+<td>Секреты не в Git / не в образе Docker</td>
+<td>☑</td>
+<td><code>.env</code> gitignored, <code>.dockerignore</code></td>
+</tr>
+<tr>
+<td>C.6</td>
+<td>CSRF-защита на POST-запросах</td>
+<td>☑</td>
+<td><code>X-CSRF-Token</code></td>
+</tr>
+<tr>
+<td>C.7</td>
+<td>OpenAPI/Swagger отключён в production</td>
+<td>☑</td>
+<td><code>docs_url=None</code></td>
+</tr>
+<tr>
+<td>C.8</td>
+<td>Debug-раздел отключён в production</td>
+<td>☑</td>
+<td>404 при <code>DEBUG=false</code></td>
+</tr>
+<tr>
+<td>C.9</td>
+<td>RBAC / индивидуальные учётные записи</td>
+<td>☐</td>
+<td>Технический долг: общий Basic Auth</td>
+</tr>
+<tr>
+<td>C.10</td>
+<td>SSO / AD / LDAP</td>
+<td>☐</td>
+<td>Запланировано</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>D. Защита приложения</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D.1</td>
+<td>CSP заголовок установлен</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.2</td>
+<td>X-Frame-Options: DENY</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.3</td>
+<td>X-Content-Type-Options: nosniff</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.4</td>
+<td>TrustedHostMiddleware (Host header)</td>
+<td>☑</td>
+<td><code>ALLOWED_HOSTS</code></td>
+</tr>
+<tr>
+<td>D.5</td>
+<td>SQL-инъекции: parameterized queries</td>
+<td>☑</td>
+<td>SQLite</td>
+</tr>
+<tr>
+<td>D.6</td>
+<td>Path traversal при upload предотвращён</td>
+<td>☑</td>
+<td>UUID filenames</td>
+</tr>
+<tr>
+<td>D.7</td>
+<td>Лимит размера upload</td>
+<td>☑</td>
+<td>50 МБ + nginx 52 МБ</td>
+</tr>
+<tr>
+<td>D.8</td>
+<td>ZIP/XLSX validation (не только расширение)</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.9</td>
+<td>Zip bomb / resource limits</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.10</td>
+<td>Rate limit на upload</td>
+<td>☑</td>
+<td>app + nginx</td>
+</tr>
+<tr>
+<td>D.11</td>
+<td><code>/ready</code> не раскрывает внутренние пути</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>D.12</td>
+<td>Ошибки 500 не раскрывают stack trace пользователю</td>
+<td>☑</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>E. Контейнеры и ОС</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E.1</td>
+<td>Контейнер <code>web</code> работает non-root (UID 10001)</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>E.2</td>
+<td>Контейнер <code>nginx</code> работает non-root (UID 101)</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>E.3</td>
+<td><code>read_only: true</code> на контейнерах</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>E.4</td>
+<td><code>cap_drop: ALL</code></td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>E.5</td>
+<td><code>no-new-privileges: true</code></td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>E.6</td>
+<td>Права на тома data/uploads/runtime/logs (UID 10001)</td>
+<td>☑</td>
+<td>init-permissions</td>
+</tr>
+<tr>
+<td>E.7</td>
+<td>Шифрование диска хоста (BitLocker/LUKS)</td>
+<td>☐</td>
+<td>На стороне ОС</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>F. Логирование и мониторинг</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F.1</td>
+<td>JSON-логи запросов и ошибок</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>F.2</td>
+<td>Логирование неуспешной аутентификации</td>
+<td>☑</td>
+<td></td>
+</tr>
+<tr>
+<td>F.3</td>
+<td>Секреты не попадают в логи</td>
+<td>☑</td>
+<td>Маскирование</td>
+</tr>
+<tr>
+<td>F.4</td>
+<td>Ротация логов приложения</td>
+<td>☑</td>
+<td>RotatingFileHandler</td>
+</tr>
+<tr>
+<td>F.5</td>
+<td>Ротация логов Docker</td>
+<td>☑</td>
+<td>json-file max-size/max-file</td>
+</tr>
+<tr>
+<td>F.6</td>
+<td>Healthcheck контейнеров</td>
+<td>☑</td>
+<td>web + nginx</td>
+</tr>
+<tr>
+<td>F.7</td>
+<td>Мониторинг <code>/ready</code> из разрешённой сети</td>
+<td>☐</td>
+<td>Настроить в Zabbix/Prometheus</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>G. Резервное копирование</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G.1</td>
+<td>Скрипт резервного копирования</td>
+<td>☑</td>
+<td><code>scripts/ops/backup_restore.py</code></td>
+</tr>
+<tr>
+<td>G.2</td>
+<td>Регламент периодичности backup</td>
+<td>☐</td>
+<td>Ежедневно — по решению ИТ</td>
+</tr>
+<tr>
+<td>G.3</td>
+<td>Хранение backup на зашифрованном носителе</td>
+<td>☐</td>
+<td></td>
+</tr>
+<tr>
+<td>G.4</td>
+<td>Проверка восстановления (restore drill)</td>
+<td>☐</td>
+<td>Рекомендуется ежеквартально</td>
+</tr>
+<tr>
+<td>G.5</td>
+<td><code>.env</code> включается в backup отдельно</td>
+<td>☑</td>
+<td>Опционально GPG</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>H. Зависимости и CI</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H.1</td>
+<td><code>pip-audit</code> — 0 уязвимостей</td>
+<td>☑</td>
+<td>19.08.2026</td>
+</tr>
+<tr>
+<td>H.2</td>
+<td><code>npm audit</code> — 0 high+</td>
+<td>☑</td>
+<td>overrides nanoid/uuid</td>
+</tr>
+<tr>
+<td>H.3</td>
+<td>Автотесты безопасности (30 tests)</td>
+<td>☑</td>
+<td>pytest</td>
+</tr>
+<tr>
+<td>H.4</td>
+<td><code>scripts/security_check.py</code> в release-процессе</td>
+<td>☐</td>
+<td>Включить в CI/CD</td>
+</tr>
+<tr>
+<td>H.5</td>
+<td>Сканирование образа Docker (trivy)</td>
+<td>☐</td>
+<td>Рекомендуется</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>I. Эксплуатационные запреты</h2>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проверка</th>
+<th>Статус</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I.1</td>
+<td><code>docker-compose.dev.yml</code> не используется на production-серверах</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>I.2</td>
+<td><code>DEBUG=true</code> не установлен в production</td>
+<td>☑</td>
+</tr>
+<tr>
+<td>I.3</td>
+<td>Порт 18000 не опубликован в production</td>
+<td>☑</td>
+</tr>
+<tr>
+<td>I.4</td>
+<td>Загрузка Excel с ПДн не допускается</td>
+<td>☑</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>J. Smoke-check (ручная проверка)</h2>
+<p>Выполнить после развёртывания:</p>
+<pre><code class="language-bash"># 1. Редирект HTTP → HTTPS
+curl -sI http://&lt;SERVER_NAME&gt;/ | findstr &quot;301&quot;
+
+# 2. Без auth → 401
+curl -sk https://&lt;SERVER_NAME&gt;/dashboard -o NUL -w &quot;%{http_code}&quot;
+
+# 3. С auth → 200
+curl -sk -u user:pass https://&lt;SERVER_NAME&gt;/dashboard -o NUL -w &quot;%{http_code}&quot;
+
+# 4. /ready с рабочей станции → 403
+curl -sk https://&lt;SERVER_NAME&gt;/ready -o NUL -w &quot;%{http_code}&quot;
+
+# 5. Backend порт закрыт
+# Test-NetConnection &lt;host&gt; -Port 8000  → должно fail
+
+# 6. Автоматическая проверка
+python scripts/security_check.py
+</code></pre></section>
+  </div>
+</body>
+</html>

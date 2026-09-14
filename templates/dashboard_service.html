@@ -125,8 +125,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script>
+<script src="/static/dist/charts.js"></script>
+<script nonce="{{ csp_nonce }}">
   const labels = {{ peer_labels | tojson }};
   const values = {{ peer_totals | tojson }};
   const currentService = {{ service.service_name | tojson }};

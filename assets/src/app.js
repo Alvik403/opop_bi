@@ -1,5 +1,10 @@
 import "./app.css";
 
+function csrfHeaders() {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  return token ? { "X-CSRF-Token": token } : {};
+}
+
 function initSortableTables() {
   const parseNumber = (text) => {
     const normalized = String(text || "")
@@ -121,6 +126,7 @@ function initFileMenu() {
       try {
         const response = await fetch(`/api/session/active-file/${button.dataset.fileSelect}`, {
           method: "POST",
+          headers: csrfHeaders(),
         });
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
@@ -178,6 +184,7 @@ function initFileMenu() {
     try {
       const response = await fetch("/api/files/upload", {
         method: "POST",
+        headers: csrfHeaders(),
         body: formData,
       });
       const payload = await response.json().catch(() => ({}));

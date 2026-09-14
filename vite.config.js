@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         app: "assets/src/app.js",
         excel: "assets/src/excel.js",
+        charts: "assets/src/charts.js",
       },
       output: {
         entryFileNames: "[name].js",
